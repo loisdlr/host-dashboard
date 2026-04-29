@@ -37,7 +37,28 @@ export default function NewExpense() {
   const [category, setCategory] = useState("Complimentary Supplies");
   const [description, setDescription] = useState("");
 
-  import { Alert, Platform, StyleSheet, View } from "react-native";
+  const submit = () => {
+    const value = Number(amount);
+    
+    // Web-friendly alert logic
+    if (!value || value <= 0) {
+      if (Platform.OS === 'web') {
+        window.alert("Enter an amount");
+      } else {
+        Alert.alert("Enter an amount");
+      }
+      return;
+    }
+
+    addExpense({
+      unitId,
+      date,
+      amount: value,
+      category,
+      description: description.trim(),
+    });
+    router.back();
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
