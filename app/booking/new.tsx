@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
@@ -54,29 +54,40 @@ export default function NewBookingScreen() {
   );
 
   const submit = () => {
+    // Helper to handle alerts on Web vs Mobile
+    const showAlert = (title: string, message?: string) => {
+      if (Platform.OS === 'web') {
+        window.alert(message ? `${title}: ${message}` : title);
+      } else {
+        Alert.alert(title, message);
+      }
+    };
+
     if (!unitId) {
-      Alert.alert("Pick a unit", "Please select which unit this booking is for.");
+      showAlert("Pick a unit", "Please select which unit this booking is for.");
       return;
     }
     if (!guestName.trim()) {
-      Alert.alert("Guest name required");
+      showAlert("Guest name required");
       return;
     }
     if (!checkIn || !checkOut || checkOut <= checkIn) {
-      Alert.alert(
+      showAlert(
         "Invalid dates",
-        "Check-out must be after check-in. Use YYYY-MM-DD format.",
+        "Check-out must be after check-in. Use YYYY-MM-DD format."
       );
       return;
     }
+
     // overlap check
     const conflict = bookingsForUnit(bookings, unitId).find((b) =>
-      rangesOverlap(b.checkIn, b.checkOut, checkIn, checkOut),
+      rangesOverlap(b.checkIn, b.checkOut, checkIn, checkOut)
     );
+    
     if (conflict) {
-      Alert.alert(
+      showAlert(
         "Overlap detected",
-        `This unit is already booked from ${conflict.checkIn} to ${conflict.checkOut} (${conflict.guestName}).`,
+        `This unit is already booked from ${conflict.checkIn} to ${conflict.checkOut} (${conflict.guestName}).`
       );
       return;
     }

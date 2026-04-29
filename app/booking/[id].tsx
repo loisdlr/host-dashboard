@@ -122,18 +122,27 @@ export default function BookingDetail() {
   };
 
   const onDelete = () => {
-    Alert.alert("Delete booking", "This cannot be undone.", [
+  const message = "Delete this booking? This cannot be undone.";
+  
+  if (Platform.OS === 'web') {
+    if (window.confirm(message)) {
+      deleteBooking(id);
+      router.back();
+    }
+  } else {
+    Alert.alert("Delete booking", message, [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",
         style: "destructive",
         onPress: () => {
-          deleteBooking(booking.id);
+          deleteBooking(id);
           router.back();
         },
       },
     ]);
-  };
+  }
+};
 
   if (editing) {
     return (
