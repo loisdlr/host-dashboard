@@ -1,199 +1,199 @@
+import React, { useState } from 'react';
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  Modal, 
+  StyleSheet, 
+  Pressable, 
+  ScrollView, 
+  Alert 
+} from 'react-native';
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import React from "react";
-import {
-  Alert,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import ReanimatedSwipeable, {
-  SwipeableMethods,
-} from "react-native-gesture-handler/ReanimatedSwipeable";
-import Reanimated, { SharedValue, useAnimatedStyle } from "react-native-reanimated";
 
-import { Card } from "@/components/Card";
-import { EmptyState } from "@/components/EmptyState";
-import { ScreenHeader } from "@/components/ScreenHeader";
+// Custom Components & Hooks
 import { useColors } from "@/hooks/useColors";
 import { useRental } from "@/contexts/RentalContext";
-import React, { useState } from 'react';
-import { View, Text, TextInput, Modal, StyleSheet } from 'react-native';
-
-export default function CleanersScreen() {
-  const [selectedCleaner, setSelectedCleaner] = useState(null);
-  const [showEditForm, setShowEditForm] = useState(false);
-
-  const openEdit = (cleaner) => {
-    setSelectedCleaner(cleaner);
-    setShowEditForm(true);
-  };
-
-  return (
-    <View style={{ flex: 1 }}>
-      {/* Your List of Cleaners */}
-      {/* In your renderItem, change the onPress: */}
-      {/* onPress={() => openEdit(item)} */}
-
-      {/* --- THE EDIT FORM --- */}
-      {showEditForm && (
-        <View style={styles.inlineForm}>
-          <Text style={styles.formTitle}>Edit Cleaner: {selectedCleaner?.name}</Text>
-          <TextInput 
-            style={styles.input}
-            defaultValue={selectedCleaner?.name}
-            placeholder="Cleaner Name"
-          />
-          <Button label="Save Changes" onPress={() => setShowEditForm(false)} />
-          <Button label="Cancel" variant="secondary" onPress={() => setShowEditForm(false)} />
-        </View>
-      )}
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  inlineForm: {
-    padding: 20,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderColor: '#eee',
-    // Position this at the bottom or as a modal
-  },
-  input: {
-    borderWidth: 1,
-    padding: 10,
-    borderRadius: 8,
-    marginVertical: 10
-  }
-});
+import { Card } from "@/components/Card";
+import { Button } from "@/components/Button";
+import { ScreenHeader } from "@/components/ScreenHeader";
 
 export default function CleanersScreen() {
   const c = useColors();
-  const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { cleaners, deleteCleaner } = useRental();
+  const { cleaners, deleteCleaner, updateCleaner } = useRental();
+  
+  // State for handling the Edit Form
+  const [selectedCleaner, setSelectedCleaner] = useState<any>(null);
+  const [isEditVisible, setEditVisible] = useState(false);
 
-  const confirmDelete = (id: string, name: string, swipeable: SwipeableMethods) => {
+  // --- ACTIONS ---
+
+  const openEditForm = (cleaner: any) => {
+    setSelectedCleaner({ ...cleaner }); // Clone cleaner data into state
+    setEditVisible(true);
+  };
+
+  const confirmDelete = (id: string, name: string) => {
     Alert.alert(
-      "Remove Cleaner",
+      "Delete Cleaner",
       `Are you sure you want to remove ${name}?`,
       [
-        { text: "Cancel", style: "cancel", onPress: () => swipeable.close() },
+        { text: "Cancel", style: "cancel" },
         { 
-          text: "Remove", 
+          text: "Delete", 
           style: "destructive", 
-          onPress: () => {
-            deleteCleaner(id);
-            swipeable.close();
-          } 
-        },
+          onPress: () => deleteCleaner(id) 
+        }
       ]
     );
   };
 
-  const renderRightActions = (
-    prog: SharedValue<number>,
-    drag: SharedValue<number>,
-    swipeable: SwipeableMethods,
-    id: string,
-    name: string
-  ) => {
-    const styleAnimation = useAnimatedStyle(() => ({
-      transform: [{ translateX: drag.value + 80 }],
-    }));
-
-    return (
-      <Reanimated.View style={styleAnimation}>
-        <Pressable
-          onPress={() => confirmDelete(id, name, swipeable)}
-          style={[styles.deleteAction, { backgroundColor: c.destructive }]}
-        >
-          <Feather name="trash-2" size={20} color="white" />
-        </Pressable>
-      </Reanimated.View>
-    );
+  const handleSave = () => {
+    if (selectedCleaner) {
+      updateCleaner(selectedCleaner);
+      setEditVisible(false);
+      setSelectedCleaner(null);
+    }
   };
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
-      <ScreenHeader
-        title="Cleaners"
-        subtitle={`${cleaners.length} active personnel`}
-        rightIcon="plus"
-        onRightPress={() => router.push("/cleaner/new")}
-      />
-
-      <FlatList
-        data={cleaners}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{
-          padding: 16,
+      <ScreenHeader title="Cleaners" subtitle={`${cleaners.length} active`} />
+      
+      <ScrollView 
+        contentContainerStyle={{ 
+          padding: 16, 
           paddingBottom: insets.bottom + 20,
-          gap: 12,
+          gap: 12 
         }}
-        ListEmptyComponent={
-          <EmptyState
-            icon="user-plus"
-            title="No cleaners found"
-            description="Add your first cleaner to start assigning tasks."
-          />
-        }
-        renderItem={({ item }) => (
-  <ReanimatedSwipeable
-    // ... swipeable props
-  >
-    <Card style={{ padding: 0, overflow: 'hidden' }}>
-      <Pressable
-        onPress={() => router.push({
-          pathname: "/cleaner/[id]",
-          params: { id: item.id }
-        })}
-        style={({ pressed }) => [
-          styles.cleanerRow,
-          { backgroundColor: pressed ? c.accent : c.card }
-        ]}
       >
-        {/* Cleaner Row Content (Avatar, Name, etc.) */}
-        <View style={[styles.avatar, { backgroundColor: c.muted }]}>
-           <Text style={{ color: c.foreground }}>{item.name[0]}</Text>
+        {cleaners.length === 0 ? (
+           <View style={styles.emptyContainer}>
+             <Feather name="users" size={40} color={c.mutedForeground} />
+             <Text style={{ color: c.mutedForeground, marginTop: 8 }}>No cleaners added yet.</Text>
+           </View>
+        ) : (
+          cleaners.map((item) => (
+            <Card key={item.id} style={styles.cleanerCard}>
+              <View style={[styles.avatar, { backgroundColor: c.accent }]}>
+                <Text style={{ color: c.primary, fontWeight: '700' }}>
+                  {item.name?.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={{ fontWeight: '600', fontSize: 16, color: c.foreground }}>
+                  {item.name}
+                </Text>
+                <Text style={{ fontSize: 12, color: c.mutedForeground }}>
+                  Cleaner ID: {item.id.slice(0, 8)}
+                </Text>
+              </View>
+
+              <View style={styles.actionRow}>
+                <Pressable 
+                  onPress={() => openEditForm(item)} 
+                  style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.5 : 1 }]}
+                >
+                  <Feather name="edit-2" size={18} color={c.primary} />
+                </Pressable>
+
+                <Pressable 
+                  onPress={() => confirmDelete(item.id, item.name)} 
+                  style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.5 : 1 }]}
+                >
+                  <Feather name="trash-2" size={18} color={c.destructive} />
+                </Pressable>
+              </View>
+            </Card>
+          ))
+        )}
+      </ScrollView>
+
+      {/* --- EDIT MODAL FORM --- */}
+      <Modal 
+        visible={isEditVisible} 
+        animationType="slide" 
+        presentationStyle="pageSheet"
+        onRequestClose={() => setEditVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: c.background }}>
+          <ScreenHeader 
+            title="Edit Cleaner" 
+            leftIcon="x" 
+            onLeftPress={() => setEditVisible(false)} 
+          />
+          
+          <View style={{ padding: 20, gap: 20 }}>
+            <View>
+              <Text style={styles.label}>Full Name</Text>
+              <TextInput 
+                style={[
+                  styles.input, 
+                  { borderColor: c.border, color: c.foreground, backgroundColor: c.card }
+                ]}
+                value={selectedCleaner?.name}
+                onChangeText={(text) => setSelectedCleaner({ ...selectedCleaner, name: text })}
+                placeholder="Enter cleaner name"
+                placeholderTextColor={c.mutedForeground}
+              />
+            </View>
+
+            <View style={{ marginTop: 10, gap: 10 }}>
+              <Button label="Update Cleaner" onPress={handleSave} />
+              <Button 
+                label="Cancel" 
+                variant="secondary" 
+                onPress={() => setEditVisible(false)} 
+              />
+            </View>
+          </View>
         </View>
-        <View style={{ flex: 1 }}>
-           <Text style={styles.nameText}>{item.name}</Text>
-        </View>
-        <Feather name="chevron-right" size={18} color={c.mutedForeground} />
-      </Pressable>
-    </Card>
-  </ReanimatedSwipeable>
-)}
-      />
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  cleanerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    gap: 12,
+  cleanerCard: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    padding: 12 
   },
   avatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  deleteAction: {
-    width: 80,
-    height: "100%",
-    justifyContent: "center",
-    alignItems: "center",
-    borderTopRightRadius: 12, // Matches Card radius
-    borderBottomRightRadius: 12,
+  actionRow: { 
+    flexDirection: 'row', 
+    gap: 8 
   },
+  iconBtn: { 
+    padding: 8,
+    borderRadius: 8,
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    color: '#888',
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  input: { 
+    borderWidth: 1, 
+    padding: 14, 
+    borderRadius: 12,
+    fontSize: 16,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 100,
+  }
 });
