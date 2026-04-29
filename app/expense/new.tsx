@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Alert, StyleSheet, View } from "react-native";
+import { Alert, Platform, StyleSheet, View } from "react-native";
 
 import { Button } from "@/components/Button";
 import { DateInput } from "@/components/DateInput";
@@ -37,21 +37,7 @@ export default function NewExpense() {
   const [category, setCategory] = useState("Complimentary Supplies");
   const [description, setDescription] = useState("");
 
-  const submit = () => {
-    const value = Number(amount);
-    if (!value || value <= 0) {
-      Alert.alert("Enter an amount");
-      return;
-    }
-    addExpense({
-      unitId,
-      date,
-      amount: value,
-      category,
-      description: description.trim(),
-    });
-    router.back();
-  };
+  import { Alert, Platform, StyleSheet, View } from "react-native";
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
