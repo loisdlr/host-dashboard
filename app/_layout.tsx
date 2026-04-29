@@ -1,0 +1,106 @@
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  useFonts,
+} from "@expo-google-fonts/inter";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import React, { useEffect } from "react";
+import { Platform } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { KeyboardProvider } from "react-native-keyboard-controller";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { RentalProvider } from "@/contexts/RentalContext";
+import { setupPwa } from "@/utils/pwa";
+
+SplashScreen.preventAutoHideAsync();
+
+const queryClient = new QueryClient();
+
+function RootLayoutNav() {
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="booking/new"
+        options={{ presentation: "modal", headerShown: false }}
+      />
+      <Stack.Screen
+        name="booking/[id]"
+        options={{ presentation: "modal", headerShown: false }}
+      />
+      <Stack.Screen
+        name="expense/new"
+        options={{ presentation: "modal", headerShown: false }}
+      />
+      <Stack.Screen
+        name="cleaners"
+        options={{ presentation: "card", headerShown: false }}
+      />
+      <Stack.Screen
+        name="dues"
+        options={{ presentation: "card", headerShown: false }}
+      />
+      <Stack.Screen
+        name="quotation"
+        options={{ presentation: "card", headerShown: false }}
+      />
+      <Stack.Screen
+        name="units"
+        options={{ presentation: "card", headerShown: false }}
+      />
+      <Stack.Screen
+        name="sync"
+        options={{ presentation: "card", headerShown: false }}
+      />
+      <Stack.Screen
+        name="settings"
+        options={{ presentation: "card", headerShown: false }}
+      />
+    </Stack>
+  );
+}
+
+export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
+
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError]);
+
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      setupPwa();
+    }
+  }, []);
+
+  if (!fontsLoaded && !fontError) return null;
+
+  return (
+    <SafeAreaProvider>
+      <ErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <KeyboardProvider>
+              <RentalProvider>
+                <RootLayoutNav />
+              </RentalProvider>
+            </KeyboardProvider>
+          </GestureHandlerRootView>
+        </QueryClientProvider>
+      </ErrorBoundary>
+    </SafeAreaProvider>
+  );
+}
