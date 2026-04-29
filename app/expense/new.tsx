@@ -98,4 +98,4 @@ export default function NewExpenseScreen() {
   );
 }
 
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({});// Force rebuild
