@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useMemo, useState, useRef } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -29,13 +29,12 @@ import {
   toISODate,
 } from "@/utils/date";
 import {
-  bookingTotal,
   formatMoney,
   splitForAll,
   splitForUnit,
 } from "@/utils/finance";
-import { buildIncomeStatementHtml, exportPdf } from "@/utils/pdf";
-import type { Booking, Expense, Settings, Unit } from "@/types";
+import { buildSingleUnitPdf, buildPortfolioPdf, exportPdf } from "@/utils/pdf";
+import type { Expense } from "@/types";
 
 type Period = "month" | "ytd" | "all";
 
@@ -67,13 +66,6 @@ export default function FinanceScreen() {
     return splitForUnit(unitId, bookings, expenses, settings, range);
   }, [unitId, bookings, expenses, settings, range]);
 
-  const unitBreakdown = useMemo(() => {
-    return units.map((u) => ({
-      unit: u,
-      split: splitForUnit(u.id, bookings, expenses, settings, range),
-    }));
-  }, [units, bookings, expenses, settings, range]);
-
   const recentExpenses = useMemo(() => {
     let list = [...expenses];
     if (unitId !== "all") {
@@ -86,22 +78,16 @@ export default function FinanceScreen() {
   }, [expenses, unitId, range]);
 
   const periodLabel =
-    period === "month"
-      ? "This month"
-      : period === "ytd"
-        ? "Year to date"
-        : "All time";
+    period === "month" ? "This month" : period === "ytd" ? "Year to date" : "All time";
+
+  // --- Actions ---
 
   const onExportPdf = async () => {
     try {
-      const targetUnits =
-        unitId === "all" ? units : units.filter((u) => u.id === unitId);
-      if (targetUnits.length === 0) {
-        Alert.alert("No unit selected");
-        return;
-      }
-      const html =
-        unitId === "all"
+      const targetUnits = unitId === "all" ? units : units.filter((u) => u.id === unitId);
+      if (targetUnits.length === 0) return Alert.alert("No unit selected");
+      
+      const html = unitId === "all"
           ? buildPortfolioPdf(units, bookings, expenses, settings, range, periodLabel)
           : buildSingleUnitPdf(targetUnits[0]!, bookings, expenses, settings, range, periodLabel);
 
@@ -110,46 +96,47 @@ export default function FinanceScreen() {
         filename: `${unitId === "all" ? "Portfolio" : (targetUnits[0]?.name ?? "Unit")}-Statement.pdf`,
       });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Could not export PDF.";
-      Alert.alert("Export failed", msg);
+      Alert.alert("Export failed", e instanceof Error ? e.message : "Could not export PDF.");
     }
   };
 
   const confirmDelete = (id: string, swipeable: SwipeableMethods) => {
-    Alert.alert(
-      "Delete Expense", 
-      "Are you sure you want to delete this expense?", 
-      [
-        { text: "Cancel", style: "cancel", onPress: () => swipeable.close() },
-        { 
-          text: "Delete", 
-          style: "destructive", 
-          onPress: () => {
-            deleteExpense(id);
-            swipeable.close();
-          } 
-        },
-      ]
-    );
+    Alert.alert("Delete Expense", "Are you sure you want to delete this expense?", [
+      { text: "Cancel", style: "cancel", onPress: () => swipeable.close() },
+      { 
+        text: "Delete", 
+        style: "destructive", 
+        onPress: () => {
+          deleteExpense(id);
+          swipeable.close();
+        } 
+      },
+    ]);
   };
 
   const renderRightActions = (
     prog: SharedValue<number>,
     drag: SharedValue<number>,
     swipeable: SwipeableMethods,
-    id: string
+    expenseId: string
   ) => {
     const styleAnimation = useAnimatedStyle(() => ({
-      transform: [{ translateX: drag.value + 80 }],
+      transform: [{ translateX: drag.value + 160 }],
     }));
 
     return (
-      <Reanimated.View style={styleAnimation}>
+      <Reanimated.View style={[styleAnimation, styles.actionsContainer]}>
         <Pressable
-          onPress={() => confirmDelete(id, swipeable)}
-          style={[styles.deleteAction, { backgroundColor: c.destructive }]}
+          onPress={() => { swipeable.close(); router.push(`/expense/${expenseId}`); }}
+          style={[styles.actionButton, { backgroundColor: c.accent }]}
         >
-          <Feather name="trash-2" size={20} color="white" />
+          <Feather name="edit-2" size={18} color={c.primary} />
+        </Pressable>
+        <Pressable
+          onPress={() => confirmDelete(expenseId, swipeable)}
+          style={[styles.actionButton, { backgroundColor: c.destructive }]}
+        >
+          <Feather name="trash-2" size={18} color="white" />
         </Pressable>
       </Reanimated.View>
     );
@@ -157,28 +144,13 @@ export default function FinanceScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
-      <ScreenHeader
-        title="Finance"
-        subtitle={periodLabel}
-        rightIcon="settings"
-        onRightPress={() => router.push("/settings")}
-      />
+      <ScreenHeader title="Finance" subtitle={periodLabel} rightIcon="settings" onRightPress={() => router.push("/settings")} />
 
-      <ScrollView
-        contentContainerStyle={{
-          padding: 16,
-          paddingBottom: insets.bottom + 110,
-          gap: 16,
-        }}
-      >
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 110, gap: 16 }}>
         <SegmentedControl
-          options={[
-            { value: "month", label: "Month" },
-            { value: "ytd", label: "YTD" },
-            { value: "all", label: "All" },
-          ]}
+          options={[{ value: "month", label: "Month" }, { value: "ytd", label: "YTD" }, { value: "all", label: "All" }]}
           value={period}
-          onChange={(v) => setPeriod(v)}
+          onChange={(v) => setPeriod(v as Period)}
         />
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
@@ -196,6 +168,7 @@ export default function FinanceScreen() {
           fullWidth
         />
 
+        {/* Net Profit Card */}
         <Card>
           <Text style={[styles.statLabel, { color: c.mutedForeground }]}>Net profit · {periodLabel}</Text>
           <Text style={[styles.statValue, { color: result.net >= 0 ? c.foreground : c.destructive }]}>
@@ -208,7 +181,7 @@ export default function FinanceScreen() {
           </View>
         </Card>
 
-        {/* Investor Split */}
+        {/* Profit Distribution Card */}
         <Card>
           <View style={styles.rowBetween}>
             <View>
@@ -230,14 +203,14 @@ export default function FinanceScreen() {
               <Text style={{ color: c.primary, fontFamily: "Inter_700Bold", fontSize: 22 }}>{formatMoney(result.investorShare, settings.currency)}</Text>
             </View>
             <View style={[styles.divider, { borderColor: c.border, height: 40, borderRightWidth: StyleSheet.hairlineWidth }]} />
-            <div style={{ flex: 1, alignItems: "flex-end" }}>
+            <View style={{ flex: 1, alignItems: "flex-end" }}>
               <Text style={[styles.splitLabel, { color: c.mutedForeground }]}>Operator ({settings.operatorSharePct}%)</Text>
               <Text style={{ color: c.foreground, fontFamily: "Inter_700Bold", fontSize: 22 }}>{formatMoney(result.operatorShare, settings.currency)}</Text>
-            </div>
+            </View>
           </View>
         </Card>
 
-        {/* Recent Expenses Section */}
+        {/* Recent Expenses List */}
         <View>
           <View style={[styles.rowBetween, { marginBottom: 10 }]}>
             <Text style={{ color: c.foreground, fontFamily: "Inter_700Bold", fontSize: 16 }}>Recent expenses</Text>
@@ -251,35 +224,35 @@ export default function FinanceScreen() {
           </View>
           <Card style={{ padding: 0, overflow: "hidden" }}>
             {recentExpenses.length === 0 ? (
-              <EmptyState icon="dollar-sign" title="No expenses yet" description="Track repairs, supplies, and bills here." />
+              <EmptyState icon="dollar-sign" title="No expenses yet" description="Track repairs and bills here." />
             ) : (
               recentExpenses.map((e, idx) => (
                 <ReanimatedSwipeable
                   key={e.id}
                   friction={2}
                   rightThreshold={40}
-                  renderRightActions={(prog, drag, swipeable) => 
-                    renderRightActions(prog, drag, swipeable, e.id)
-                  }
+                  renderRightActions={(prog, drag, sw) => renderRightActions(prog, drag, sw, e.id)}
                 >
-                  <View style={[styles.expenseRow, { 
-                    backgroundColor: c.card, 
-                    borderTopColor: c.border, 
-                    borderTopWidth: idx === 0 ? 0 : StyleSheet.hairlineWidth 
-                  }]}>
+                  <Pressable
+                    onPress={() => router.push(`/expense/${e.id}`)}
+                    style={({ pressed }) => [
+                      styles.expenseRow,
+                      { backgroundColor: pressed ? c.accent : c.card, borderTopColor: c.border, borderTopWidth: idx === 0 ? 0 : StyleSheet.hairlineWidth }
+                    ]}
+                  >
                     <View style={[styles.expenseIcon, { backgroundColor: c.accent, borderRadius: c.radius - 6 }]}>
                       <Feather name="tag" size={14} color={c.primary} />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={{ color: c.foreground, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>{e.description || e.category}</Text>
-                      <Text style={{ color: c.mutedForeground, fontFamily: "Inter_400Regular", fontSize: 11 }}>
+                      <Text style={{ color: c.mutedForeground, fontSize: 11 }}>
                         {e.category} · {units.find((u) => u.id === e.unitId)?.name ?? "All Units"} · {formatLong(e.date)}
                       </Text>
                     </View>
                     <Text style={{ color: c.destructive, fontFamily: "Inter_700Bold", fontSize: 14 }}>
                       -{formatMoney(e.amount, settings.currency)}
                     </Text>
-                  </View>
+                  </Pressable>
                 </ReanimatedSwipeable>
               ))
             )}
@@ -290,7 +263,7 @@ export default function FinanceScreen() {
   );
 }
 
-// Helper components remain largely the same, ensuring Row uses useColors()
+// Helpers
 function Row({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
   const c = useColors();
   return (
@@ -315,18 +288,12 @@ function UnitChip({ label, active, onPress }: { label: string; active: boolean; 
   const c = useColors();
   return (
     <Pressable onPress={onPress}>
-      <View style={{ 
-        paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999, 
-        backgroundColor: active ? c.primary : c.muted, 
-        borderWidth: StyleSheet.hairlineWidth, borderColor: active ? c.primary : c.border 
-      }}>
+      <View style={{ paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999, backgroundColor: active ? c.primary : c.muted, borderWidth: StyleSheet.hairlineWidth, borderColor: active ? c.primary : c.border }}>
         <Text style={{ color: active ? c.primaryForeground : c.foreground, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>{label}</Text>
       </View>
     </Pressable>
   );
 }
-
-// ... Keep existing PDF build functions (buildSingleUnitPdf, buildPortfolioPdf) ...
 
 const styles = StyleSheet.create({
   divider: { borderTopWidth: StyleSheet.hairlineWidth },
@@ -337,5 +304,6 @@ const styles = StyleSheet.create({
   splitLabel: { fontFamily: "Inter_500Medium", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5 },
   expenseRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
   expenseIcon: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
-  deleteAction: { width: 80, height: "100%", justifyContent: "center", alignItems: "center" },
+  actionsContainer: { flexDirection: "row", width: 160, height: "100%" },
+  actionButton: { width: 80, height: "100%", justifyContent: "center", alignItems: "center" },
 });
