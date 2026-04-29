@@ -15,7 +15,7 @@ import { todayISO } from "@/utils/date";
 export default function NewExpenseScreen() {
   const c = useColors();
   const router = useRouter();
-  const { units, addExpense, settings } = useRental();
+  const { units, addExpense } = useRental();
 
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
@@ -51,10 +51,11 @@ export default function NewExpenseScreen() {
 
       <KeyboardAwareScrollViewCompat
         contentContainerStyle={{ padding: 16, gap: 16 }}
+        keyboardShouldPersistTaps="handled"
       >
         <Field
           label="Description"
-          placeholder="e.g. Electricity bill, Repairs"
+          placeholder="e.g. Electricity, Repairs"
           value={description}
           onChangeText={setDescription}
         />
@@ -67,11 +68,7 @@ export default function NewExpenseScreen() {
           keyboardType="numeric"
         />
 
-        <DateInput 
-          label="Date" 
-          value={date} 
-          onChange={setDate} 
-        />
+        <DateInput label="Date" value={date} onChange={setDate} />
 
         <Picker
           label="Unit"
@@ -101,6 +98,4 @@ export default function NewExpenseScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  // Add any custom styles here
-});
+const styles = StyleSheet.create({});
