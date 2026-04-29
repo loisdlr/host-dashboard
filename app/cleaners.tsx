@@ -12,7 +12,6 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-// Custom Components & Hooks
 import { useColors } from "@/hooks/useColors";
 import { useRental } from "@/contexts/RentalContext";
 import { Card } from "@/components/Card";
@@ -22,23 +21,35 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 export default function CleanersScreen() {
   const c = useColors();
   const insets = useSafeAreaInsets();
-  const { cleaners, deleteCleaner, updateCleaner } = useRental();
+  const { cleaners, deleteCleaner, updateCleaner, addCleaner } = useRental();
   
-  // State for handling the Edit Form
-  const [selectedCleaner, setSelectedCleaner] = useState<any>(null);
+  // Modals and Input States
+  const [isAddVisible, setAddVisible] = useState(false);
   const [isEditVisible, setEditVisible] = useState(false);
+  const [selectedCleaner, setSelectedCleaner] = useState<any>(null);
+  const [newName, setNewName] = useState("");
 
   // --- ACTIONS ---
 
-  const openEditForm = (cleaner: any) => {
-    setSelectedCleaner({ ...cleaner }); // Clone cleaner data into state
-    setEditVisible(true);
+  const handleAdd = () => {
+    if (!newName.trim()) return Alert.alert("Required", "Please enter a name.");
+    addCleaner({ name: newName });
+    setNewName("");
+    setAddVisible(false);
+  };
+
+  const handleUpdate = () => {
+    if (selectedCleaner && selectedCleaner.name.trim()) {
+      updateCleaner(selectedCleaner);
+      setEditVisible(false);
+      setSelectedCleaner(null);
+    }
   };
 
   const confirmDelete = (id: string, name: string) => {
     Alert.alert(
-      "Delete Cleaner",
-      `Are you sure you want to remove ${name}?`,
+      "Remove Staff",
+      `Are you sure you want to delete ${name}?`,
       [
         { text: "Cancel", style: "cancel" },
         { 
@@ -50,60 +61,37 @@ export default function CleanersScreen() {
     );
   };
 
-  const handleSave = () => {
-    if (selectedCleaner) {
-      updateCleaner(selectedCleaner);
-      setEditVisible(false);
-      setSelectedCleaner(null);
-    }
-  };
-
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
-      <ScreenHeader title="Cleaners" subtitle={`${cleaners.length} active`} />
+      <ScreenHeader 
+        title="Cleaners" 
+        subtitle={`${cleaners.length} staff members`} 
+        rightIcon="plus"
+        onRightPress={() => setAddVisible(true)}
+      />
       
-      <ScrollView 
-        contentContainerStyle={{ 
-          padding: 16, 
-          paddingBottom: insets.bottom + 20,
-          gap: 12 
-        }}
-      >
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 20, gap: 12 }}>
         {cleaners.length === 0 ? (
-           <View style={styles.emptyContainer}>
-             <Feather name="users" size={40} color={c.mutedForeground} />
-             <Text style={{ color: c.mutedForeground, marginTop: 8 }}>No cleaners added yet.</Text>
+           <View style={styles.empty}>
+             <Feather name="user-plus" size={48} color={c.mutedForeground} />
+             <Text style={{ color: c.mutedForeground, marginTop: 12 }}>No cleaners added.</Text>
            </View>
         ) : (
           cleaners.map((item) => (
-            <Card key={item.id} style={styles.cleanerCard}>
+            <Card key={item.id} style={styles.card}>
               <View style={[styles.avatar, { backgroundColor: c.accent }]}>
-                <Text style={{ color: c.primary, fontWeight: '700' }}>
-                  {item.name?.charAt(0).toUpperCase()}
-                </Text>
+                <Text style={{ color: c.primary, fontWeight: '700' }}>{item.name?.[0]}</Text>
               </View>
 
               <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={{ fontWeight: '600', fontSize: 16, color: c.foreground }}>
-                  {item.name}
-                </Text>
-                <Text style={{ fontSize: 12, color: c.mutedForeground }}>
-                  Cleaner ID: {item.id.slice(0, 8)}
-                </Text>
+                <Text style={{ fontWeight: '600', color: c.foreground }}>{item.name}</Text>
               </View>
 
-              <View style={styles.actionRow}>
-                <Pressable 
-                  onPress={() => openEditForm(item)} 
-                  style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.5 : 1 }]}
-                >
+              <View style={styles.actions}>
+                <Pressable onPress={() => { setSelectedCleaner({...item}); setEditVisible(true); }} style={styles.btn}>
                   <Feather name="edit-2" size={18} color={c.primary} />
                 </Pressable>
-
-                <Pressable 
-                  onPress={() => confirmDelete(item.id, item.name)} 
-                  style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.5 : 1 }]}
-                >
+                <Pressable onPress={() => confirmDelete(item.id, item.name)} style={styles.btn}>
                   <Feather name="trash-2" size={18} color={c.destructive} />
                 </Pressable>
               </View>
@@ -112,43 +100,35 @@ export default function CleanersScreen() {
         )}
       </ScrollView>
 
-      {/* --- EDIT MODAL FORM --- */}
-      <Modal 
-        visible={isEditVisible} 
-        animationType="slide" 
-        presentationStyle="pageSheet"
-        onRequestClose={() => setEditVisible(false)}
-      >
-        <View style={{ flex: 1, backgroundColor: c.background }}>
-          <ScreenHeader 
-            title="Edit Cleaner" 
-            leftIcon="x" 
-            onLeftPress={() => setEditVisible(false)} 
-          />
-          
-          <View style={{ padding: 20, gap: 20 }}>
-            <View>
-              <Text style={styles.label}>Full Name</Text>
-              <TextInput 
-                style={[
-                  styles.input, 
-                  { borderColor: c.border, color: c.foreground, backgroundColor: c.card }
-                ]}
-                value={selectedCleaner?.name}
-                onChangeText={(text) => setSelectedCleaner({ ...selectedCleaner, name: text })}
-                placeholder="Enter cleaner name"
-                placeholderTextColor={c.mutedForeground}
-              />
-            </View>
+      {/* --- ADD MODAL --- */}
+      <Modal visible={isAddVisible} animationType="slide">
+        <View style={{ flex: 1, backgroundColor: c.background, paddingTop: 50 }}>
+          <ScreenHeader title="New Cleaner" leftIcon="x" onLeftPress={() => setAddVisible(false)} />
+          <View style={styles.form}>
+            <Text style={styles.label}>Staff Name</Text>
+            <TextInput 
+              style={[styles.input, { borderColor: c.border, color: c.foreground }]}
+              placeholder="e.g. Maria Clara"
+              value={newName}
+              onChangeText={setNewName}
+            />
+            <Button label="Save Staff" onPress={handleAdd} />
+          </View>
+        </View>
+      </Modal>
 
-            <View style={{ marginTop: 10, gap: 10 }}>
-              <Button label="Update Cleaner" onPress={handleSave} />
-              <Button 
-                label="Cancel" 
-                variant="secondary" 
-                onPress={() => setEditVisible(false)} 
-              />
-            </View>
+      {/* --- EDIT MODAL --- */}
+      <Modal visible={isEditVisible} animationType="slide">
+        <View style={{ flex: 1, backgroundColor: c.background, paddingTop: 50 }}>
+          <ScreenHeader title="Edit Staff" leftIcon="x" onLeftPress={() => setEditVisible(false)} />
+          <View style={styles.form}>
+            <Text style={styles.label}>Full Name</Text>
+            <TextInput 
+              style={[styles.input, { borderColor: c.border, color: c.foreground }]}
+              value={selectedCleaner?.name}
+              onChangeText={(t) => setSelectedCleaner({...selectedCleaner, name: t})}
+            />
+            <Button label="Update Details" onPress={handleUpdate} />
           </View>
         </View>
       </Modal>
@@ -157,43 +137,12 @@ export default function CleanersScreen() {
 }
 
 const styles = StyleSheet.create({
-  cleanerCard: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    padding: 12 
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionRow: { 
-    flexDirection: 'row', 
-    gap: 8 
-  },
-  iconBtn: { 
-    padding: 8,
-    borderRadius: 8,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    color: '#888',
-    marginBottom: 8,
-    marginLeft: 4,
-  },
-  input: { 
-    borderWidth: 1, 
-    padding: 14, 
-    borderRadius: 12,
-    fontSize: 16,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 100,
-  }
+  card: { flexDirection: 'row', alignItems: 'center', padding: 12 },
+  avatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  actions: { flexDirection: 'row', gap: 14 },
+  btn: { padding: 4 },
+  form: { padding: 20, gap: 16 },
+  label: { fontSize: 11, fontWeight: '600', color: '#888', textTransform: 'uppercase' },
+  input: { borderWidth: 1, padding: 14, borderRadius: 12, fontSize: 16 },
+  empty: { alignItems: 'center', marginTop: 120 }
 });
