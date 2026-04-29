@@ -122,12 +122,20 @@ export default function CleanersScreen() {
       { 
         text: "Delete", 
         style: "destructive", 
-        onPress: () => deleteCleaner(id) 
+        onPress: () => {
+          deleteCleaner(id);
+        }
       },
     ]);
   };
 
   // --- JOB ACTIONS ---
+
+  const openJobForCleaner = (cleaner: any) => {
+    setJobCleanerId(cleaner.id);
+    setJobAmount(String(cleaner.ratePerClean));
+    setShowAddJob(true);
+  };
 
   const submitJob = () => {
     if (!jobUnitId || !jobCleanerId) {
@@ -184,12 +192,19 @@ export default function CleanersScreen() {
                     <Text style={{ color: c.foreground, fontFamily: "Inter_700Bold", fontSize: 16 }}>{cleaner.name}</Text>
                     <Text style={{ color: c.mutedForeground, fontSize: 12 }}>{cleaner.phone || "No phone"}</Text>
                   </View>
-                  <View style={{ flexDirection: "row", gap: 16 }}>
-                    <Pressable onPress={() => handleEditCleaner(cleaner)}>
+                  <View style={{ flexDirection: "row", gap: 14, alignItems: 'center' }}>
+                    <Pressable 
+                      hitSlop={12} 
+                      onPress={() => openJobForCleaner(cleaner)}
+                      style={{ backgroundColor: c.accent, padding: 6, borderRadius: 6 }}
+                    >
+                      <Feather name="calendar" size={16} color={c.primary} />
+                    </Pressable>
+                    <Pressable hitSlop={12} onPress={() => handleEditCleaner(cleaner)}>
                       <Feather name="edit-2" size={18} color={c.mutedForeground} />
                     </Pressable>
-                    <Pressable onPress={() => handleDeleteCleaner(cleaner.id, cleaner.name)}>
-                      <Feather name="trash-2" size={18} color={c.error || "#ef4444"} />
+                    <Pressable hitSlop={12} onPress={() => handleDeleteCleaner(cleaner.id, cleaner.name)}>
+                      <Feather name="trash-2" size={18} color="#ef4444" />
                     </Pressable>
                   </View>
                 </View>
@@ -202,30 +217,34 @@ export default function CleanersScreen() {
             ))
           )
         ) : (
-          sortedJobs.map((j) => (
-            <Card key={j.id}>
-              <View style={styles.jobRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: c.foreground, fontFamily: "Inter_700Bold" }}>{cleanerName(j.cleanerId)}</Text>
-                  <Text style={{ color: c.mutedForeground, fontSize: 12 }}>{unitName(j.unitId)} • {formatLong(j.date)}</Text>
+          sortedJobs.length === 0 ? (
+            <EmptyState icon="calendar" title="No jobs yet" />
+          ) : (
+            sortedJobs.map((j) => (
+              <Card key={j.id}>
+                <View style={styles.jobRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: c.foreground, fontFamily: "Inter_700Bold" }}>{cleanerName(j.cleanerId)}</Text>
+                    <Text style={{ color: c.mutedForeground, fontSize: 12 }}>{unitName(j.unitId)} • {formatLong(j.date)}</Text>
+                  </View>
+                  <Text style={{ color: c.foreground, fontFamily: "Inter_700Bold" }}>{formatMoney(j.amount, settings.currency)}</Text>
                 </View>
-                <Text style={{ color: c.foreground, fontFamily: "Inter_700Bold" }}>{formatMoney(j.amount, settings.currency)}</Text>
-              </View>
-              <View style={{ flexDirection: "row", marginTop: 12, alignItems: "center", gap: 10 }}>
-                <Pressable
-                  onPress={() => updateJob(j.id, { paid: !j.paid })}
-                  style={[styles.payToggle, { backgroundColor: j.paid ? c.success : c.muted }]}
-                >
-                  <Feather name={j.paid ? "check-circle" : "circle"} size={14} color={j.paid ? "white" : c.foreground} />
-                  <Text style={{ color: j.paid ? "white" : c.foreground, fontSize: 12, marginLeft: 6 }}>{j.paid ? "Paid" : "Mark Paid"}</Text>
-                </Pressable>
-                <View style={{ flex: 1 }} />
-                <Pressable onPress={() => deleteJob(j.id)}>
-                  <Feather name="trash-2" size={16} color={c.mutedForeground} />
-                </Pressable>
-              </View>
-            </Card>
-          ))
+                <View style={{ flexDirection: "row", marginTop: 12, alignItems: "center", gap: 10 }}>
+                  <Pressable
+                    onPress={() => updateJob(j.id, { paid: !j.paid })}
+                    style={[styles.payToggle, { backgroundColor: j.paid ? c.success : c.muted }]}
+                  >
+                    <Feather name={j.paid ? "check-circle" : "circle"} size={14} color={j.paid ? "white" : c.foreground} />
+                    <Text style={{ color: j.paid ? "white" : c.foreground, fontSize: 12, marginLeft: 6 }}>{j.paid ? "Paid" : "Mark Paid"}</Text>
+                  </Pressable>
+                  <View style={{ flex: 1 }} />
+                  <Pressable hitSlop={12} onPress={() => deleteJob(j.id)}>
+                    <Feather name="trash-2" size={16} color={c.mutedForeground} />
+                  </Pressable>
+                </View>
+              </Card>
+            ))
+          )
         )}
       </ScrollView>
 
@@ -234,10 +253,10 @@ export default function CleanersScreen() {
         <View style={{ flex: 1, backgroundColor: c.background }}>
           <ScreenHeader title={editingCleanerId ? "Edit Cleaner" : "Add Cleaner"} leftIcon="x" onLeftPress={closeCleanerModal} />
           <KeyboardAwareScrollViewCompat contentContainerStyle={{ padding: 16, gap: 16 }}>
-            <Field label="Name" value={name} onChangeText={setName} />
-            <Field label="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-            <Field label="Rate per Clean" value={rate} onChangeText={setRate} keyboardType="numeric" />
-            <Button label={editingCleanerId ? "Update" : "Save"} onPress={submitCleaner} fullWidth />
+            <Field label="Name" value={name} onChangeText={setName} placeholder="Full Name" />
+            <Field label="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="0917..." />
+            <Field label="Rate per Clean" value={rate} onChangeText={setRate} keyboardType="numeric" placeholder="500" />
+            <Button label={editingCleanerId ? "Update Cleaner" : "Save Cleaner"} onPress={submitCleaner} fullWidth />
           </KeyboardAwareScrollViewCompat>
         </View>
       </Modal>
@@ -245,13 +264,17 @@ export default function CleanersScreen() {
       {/* Job Modal */}
       <Modal visible={showAddJob} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowAddJob(false)}>
         <View style={{ flex: 1, backgroundColor: c.background }}>
-          <ScreenHeader title="Add Job" leftIcon="x" onLeftPress={() => setShowAddJob(false)} />
+          <ScreenHeader title="Add Cleaning Job" leftIcon="x" onLeftPress={() => setShowAddJob(false)} />
           <KeyboardAwareScrollViewCompat contentContainerStyle={{ padding: 16, gap: 16 }}>
-            <Picker label="Cleaner" value={jobCleanerId} options={cleaners.map(cl => ({ label: cl.name, value: cl.id }))} onChange={setJobCleanerId} />
-            <Picker label="Unit" value={jobUnitId} options={units.map(u => ({ label: u.name, value: u.id }))} onChange={setJobUnitId} />
-            <DateInput label="Date" value={jobDate} onChange={setJobDate} />
-            <Field label="Amount" value={jobAmount} onChangeText={setJobAmount} keyboardType="numeric" />
-            <Field label="Notes" value={jobNotes} onChangeText={setJobNotes} />
+            <Picker label="Cleaner" value={jobCleanerId} options={cleaners.map(cl => ({ label: cl.name, value: cl.id }))} onChange={(val) => {
+              setJobCleanerId(val);
+              const cl = cleaners.find(c => c.id === val);
+              if (cl) setJobAmount(String(cl.ratePerClean));
+            }} />
+            <Picker label="Unit to Clean" value={jobUnitId} options={units.map(u => ({ label: u.name, value: u.id }))} onChange={setJobUnitId} />
+            <DateInput label="Date of Cleaning" value={jobDate} onChange={setJobDate} />
+            <Field label="Price for this Job" value={jobAmount} onChangeText={setJobAmount} keyboardType="numeric" />
+            <Field label="Notes" value={jobNotes} onChangeText={setJobNotes} placeholder="e.g. Extra deep clean" />
             <Button label="Save Job" onPress={submitJob} fullWidth />
           </KeyboardAwareScrollViewCompat>
         </View>
