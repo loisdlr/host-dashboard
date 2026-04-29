@@ -20,6 +20,56 @@ import { EmptyState } from "@/components/EmptyState";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { useColors } from "@/hooks/useColors";
 import { useRental } from "@/contexts/RentalContext";
+import React, { useState } from 'react';
+import { View, Text, TextInput, Modal, StyleSheet } from 'react-native';
+
+export default function CleanersScreen() {
+  const [selectedCleaner, setSelectedCleaner] = useState(null);
+  const [showEditForm, setShowEditForm] = useState(false);
+
+  const openEdit = (cleaner) => {
+    setSelectedCleaner(cleaner);
+    setShowEditForm(true);
+  };
+
+  return (
+    <View style={{ flex: 1 }}>
+      {/* Your List of Cleaners */}
+      {/* In your renderItem, change the onPress: */}
+      {/* onPress={() => openEdit(item)} */}
+
+      {/* --- THE EDIT FORM --- */}
+      {showEditForm && (
+        <View style={styles.inlineForm}>
+          <Text style={styles.formTitle}>Edit Cleaner: {selectedCleaner?.name}</Text>
+          <TextInput 
+            style={styles.input}
+            defaultValue={selectedCleaner?.name}
+            placeholder="Cleaner Name"
+          />
+          <Button label="Save Changes" onPress={() => setShowEditForm(false)} />
+          <Button label="Cancel" variant="secondary" onPress={() => setShowEditForm(false)} />
+        </View>
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  inlineForm: {
+    padding: 20,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderColor: '#eee',
+    // Position this at the bottom or as a modal
+  },
+  input: {
+    borderWidth: 1,
+    padding: 10,
+    borderRadius: 8,
+    marginVertical: 10
+  }
+});
 
 export default function CleanersScreen() {
   const c = useColors();
