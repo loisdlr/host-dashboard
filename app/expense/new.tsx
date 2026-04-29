@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Alert, Platform, StyleSheet, View } from "react-native";
+import { Alert, StyleSheet, View } from "react-native";
 
 import { Button } from "@/components/Button";
 import { DateInput } from "@/components/DateInput";
@@ -39,17 +39,10 @@ export default function NewExpense() {
 
   const submit = () => {
     const value = Number(amount);
-    
-    // Web-friendly alert logic
     if (!value || value <= 0) {
-      if (Platform.OS === 'web') {
-        window.alert("Enter an amount");
-      } else {
-        Alert.alert("Enter an amount");
-      }
+      Alert.alert("Enter an amount");
       return;
     }
-
     addExpense({
       unitId,
       date,
