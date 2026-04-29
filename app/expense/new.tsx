@@ -1,6 +1,6 @@
+import { Alert, StyleSheet, View, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Alert, StyleSheet, View, Platform } from "react-native";
 
 import { Button } from "@/components/Button";
 import { DateInput } from "@/components/DateInput";

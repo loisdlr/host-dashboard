@@ -93,41 +93,32 @@ export default function CleanersScreen() {
           />
         }
         renderItem={({ item }) => (
-          <ReanimatedSwipeable
-            friction={2}
-            rightThreshold={40}
-            renderRightActions={(prog, drag, swipeable) =>
-              renderRightActions(prog, drag, swipeable, item.id, item.name)
-            }
-          >
-            <Card style={{ padding: 0, overflow: 'hidden' }}>
-              <Pressable
-                onPress={() => router.push(`/cleaner/${item.id}`)}
-                style={({ pressed }) => [
-                  styles.cleanerRow,
-                  { backgroundColor: pressed ? c.accent : c.card }
-                ]}
-              >
-                <View style={[styles.avatar, { backgroundColor: c.muted }]}>
-                  <Text style={{ color: c.foreground, fontFamily: "Inter_700Bold" }}>
-                    {item.name.substring(0, 1).toUpperCase()}
-                  </Text>
-                </View>
-                
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: c.foreground, fontFamily: "Inter_600SemiBold", fontSize: 16 }}>
-                    {item.name}
-                  </Text>
-                  <Text style={{ color: c.mutedForeground, fontSize: 13 }}>
-                    {item.phone || "No phone number"}
-                  </Text>
-                </View>
-
-                <Feather name="chevron-right" size={18} color={c.mutedForeground} />
-              </Pressable>
-            </Card>
-          </ReanimatedSwipeable>
-        )}
+  <ReanimatedSwipeable
+    // ... swipeable props
+  >
+    <Card style={{ padding: 0, overflow: 'hidden' }}>
+      <Pressable
+        onPress={() => router.push({
+          pathname: "/cleaner/[id]",
+          params: { id: item.id }
+        })}
+        style={({ pressed }) => [
+          styles.cleanerRow,
+          { backgroundColor: pressed ? c.accent : c.card }
+        ]}
+      >
+        {/* Cleaner Row Content (Avatar, Name, etc.) */}
+        <View style={[styles.avatar, { backgroundColor: c.muted }]}>
+           <Text style={{ color: c.foreground }}>{item.name[0]}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+           <Text style={styles.nameText}>{item.name}</Text>
+        </View>
+        <Feather name="chevron-right" size={18} color={c.mutedForeground} />
+      </Pressable>
+    </Card>
+  </ReanimatedSwipeable>
+)}
       />
     </View>
   );
