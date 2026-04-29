@@ -16,7 +16,6 @@ import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { SegmentedControl } from "@/components/SegmentedControl";
-import { StatCard } from "@/components/StatCard";
 import { useColors } from "@/hooks/useColors";
 import { useRental } from "@/contexts/RentalContext";
 import {
@@ -93,12 +92,12 @@ export default function FinanceScreen() {
     try {
       const targetUnits =
         unitId === "all" ? units : units.filter((u) => u.id === unitId);
-      if (targetUnits.length === 0) {
+      
+      if (targetUnits.length === 0 && unitId !== "all") {
         Alert.alert("No unit selected");
         return;
       }
-      // For a single PDF, export per-unit. If "All units" is chosen, generate
-      // a combined "Portfolio" statement listing every booking/expense.
+
       const html =
         unitId === "all"
           ? buildPortfolioPdf(units, bookings, expenses, settings, range, periodLabel)
@@ -106,7 +105,7 @@ export default function FinanceScreen() {
 
       await exportPdf({
         html,
-        filename: `${unitId === "all" ? "CozyManhattan-Portfolio" : (targetUnits[0]?.name ?? "Unit")}-Statement.pdf`,
+        filename: `${unitId === "all" ? "Portfolio" : (targetUnits[0]?.name ?? "Unit")}-Statement.pdf`,
       });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Could not export PDF.";
@@ -126,7 +125,7 @@ export default function FinanceScreen() {
       <ScrollView
         contentContainerStyle={{
           padding: 16,
-          paddingBottom: insets.bottom + 110,
+          paddingBottom: insets.bottom + 20,
           gap: 16,
         }}
       >
@@ -137,10 +136,9 @@ export default function FinanceScreen() {
             { value: "all", label: "All" },
           ]}
           value={period}
-          onChange={(v) => setPeriod(v)}
+          onChange={(v) => setPeriod(v as Period)}
         />
 
-        {/* Unit picker scroller */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -161,53 +159,16 @@ export default function FinanceScreen() {
           ))}
         </ScrollView>
 
-        {/* Export PDF */}
-        <Button
-          label={
-            unitId === "all"
-              ? "Export portfolio PDF"
-              : `Export ${units.find((u) => u.id === unitId)?.name ?? "unit"} PDF`
-          }
-          variant="secondary"
-          icon={<Feather name="file-text" size={16} color={c.foreground} />}
-          onPress={onExportPdf}
-          fullWidth
-        />
-
-        {/* Headline */}
         <Card>
-          <Text
-            style={{
-              color: c.mutedForeground,
-              fontFamily: "Inter_500Medium",
-              fontSize: 12,
-              textTransform: "uppercase",
-              letterSpacing: 0.5,
-            }}
-          >
-            Net profit · {periodLabel}
-          </Text>
-          <Text
-            style={{
-              color: result.net >= 0 ? c.foreground : c.destructive,
-              fontFamily: "Inter_700Bold",
-              fontSize: 32,
-              marginTop: 6,
-            }}
-          >
+          <Text style={styles.statLabel}>Net profit · {periodLabel}</Text>
+          <Text style={[styles.statValue, { color: result.net >= 0 ? c.foreground : c.destructive }]}>
             {formatMoney(result.net, settings.currency)}
           </Text>
-          <View
-            style={[
-              styles.divider,
-              { borderColor: c.border, marginVertical: 14 },
-            ]}
-          />
+          <View style={[styles.divider, { borderColor: c.border, marginVertical: 14 }]} />
           <View style={{ gap: 10 }}>
             <Row
               label="Gross income"
               value={formatMoney(result.gross, settings.currency)}
-              valueColor={c.foreground}
             />
             <Row
               label="Expenses"
@@ -217,27 +178,11 @@ export default function FinanceScreen() {
           </View>
         </Card>
 
-        {/* Investor split */}
         <Card>
           <View style={styles.rowBetween}>
             <View>
-              <Text
-                style={{
-                  color: c.foreground,
-                  fontFamily: "Inter_700Bold",
-                  fontSize: 16,
-                }}
-              >
-                Profit distribution
-              </Text>
-              <Text
-                style={{
-                  color: c.mutedForeground,
-                  fontFamily: "Inter_400Regular",
-                  fontSize: 12,
-                  marginTop: 2,
-                }}
-              >
+              <Text style={styles.cardTitle}>Profit distribution</Text>
+              <Text style={styles.cardSubtitle}>
                 {settings.investorSharePct}% investor · {settings.operatorSharePct}% operator
               </Text>
             </View>
@@ -255,148 +200,55 @@ export default function FinanceScreen() {
 
           <View style={[styles.splitRow, { marginTop: 18 }]}>
             <View style={{ flex: 1 }}>
-              <Text
-                style={{
-                  color: c.mutedForeground,
-                  fontFamily: "Inter_500Medium",
-                  fontSize: 11,
-                  textTransform: "uppercase",
-                  letterSpacing: 0.5,
-                }}
-              >
-                Investor ({settings.investorSharePct}%)
-              </Text>
-              <Text
-                style={{
-                  color: c.primary,
-                  fontFamily: "Inter_700Bold",
-                  fontSize: 22,
-                  marginTop: 4,
-                }}
-              >
+              <Text style={styles.statLabel}>Investor</Text>
+              <Text style={[styles.splitValue, { color: c.primary }]}>
                 {formatMoney(result.investorShare, settings.currency)}
               </Text>
             </View>
             <View style={[styles.divider, { borderColor: c.border, height: 40, borderRightWidth: StyleSheet.hairlineWidth }]} />
             <View style={{ flex: 1, alignItems: "flex-end" }}>
-              <Text
-                style={{
-                  color: c.mutedForeground,
-                  fontFamily: "Inter_500Medium",
-                  fontSize: 11,
-                  textTransform: "uppercase",
-                  letterSpacing: 0.5,
-                }}
-              >
-                Operator ({settings.operatorSharePct}%)
-              </Text>
-              <Text
-                style={{
-                  color: c.foreground,
-                  fontFamily: "Inter_700Bold",
-                  fontSize: 22,
-                  marginTop: 4,
-                }}
-              >
+              <Text style={styles.statLabel}>Operator</Text>
+              <Text style={styles.splitValue}>
                 {formatMoney(result.operatorShare, settings.currency)}
               </Text>
             </View>
           </View>
         </Card>
 
-        {/* Per-unit breakdown */}
-        {unitId === "all" ? (
+        <Button
+          label={unitId === "all" ? "Export portfolio PDF" : "Export unit PDF"}
+          variant="secondary"
+          icon={<Feather name="file-text" size={16} color={c.foreground} />}
+          onPress={onExportPdf}
+          fullWidth
+        />
+
+        {unitId === "all" && (
           <View>
-            <Text
-              style={{
-                color: c.foreground,
-                fontFamily: "Inter_700Bold",
-                fontSize: 16,
-                marginBottom: 10,
-              }}
-            >
-              By unit
-            </Text>
+            <Text style={styles.sectionTitle}>By unit</Text>
             <View style={{ gap: 10 }}>
-              {unitBreakdown.map(({ unit, split }) => {
-                const max = Math.max(
-                  1,
-                  ...unitBreakdown.map((x) => Math.abs(x.split.net)),
-                );
-                const widthPct = Math.min(
-                  100,
-                  Math.round((Math.abs(split.net) / max) * 100),
-                );
-                return (
-                  <Card key={unit.id} style={{ padding: 14 }}>
-                    <View style={styles.rowBetween}>
-                      <View style={{ flex: 1 }}>
-                        <Text
-                          style={{
-                            color: c.foreground,
-                            fontFamily: "Inter_600SemiBold",
-                            fontSize: 14,
-                          }}
-                        >
-                          {unit.name}
-                        </Text>
-                        <Text
-                          style={{
-                            color: c.mutedForeground,
-                            fontFamily: "Inter_400Regular",
-                            fontSize: 11,
-                            marginTop: 2,
-                          }}
-                        >
-                          {formatMoney(split.gross, settings.currency)} gross ·{" "}
-                          {formatMoney(split.expenses, settings.currency)} exp
-                        </Text>
-                      </View>
-                      <Text
-                        style={{
-                          color: split.net >= 0 ? c.foreground : c.destructive,
-                          fontFamily: "Inter_700Bold",
-                          fontSize: 15,
-                        }}
-                      >
-                        {formatMoney(split.net, settings.currency)}
+              {unitBreakdown.map(({ unit, split }) => (
+                <Card key={unit.id} style={{ padding: 14 }}>
+                  <View style={styles.rowBetween}>
+                    <View>
+                      <Text style={styles.unitName}>{unit.name}</Text>
+                      <Text style={styles.unitDetails}>
+                        {formatMoney(split.gross, settings.currency)} gross
                       </Text>
                     </View>
-                    <View
-                      style={[
-                        styles.barTrack,
-                        { backgroundColor: c.muted, borderRadius: 999 },
-                      ]}
-                    >
-                      <View
-                        style={{
-                          width: `${widthPct}%`,
-                          height: "100%",
-                          backgroundColor:
-                            split.net >= 0 ? c.primary : c.destructive,
-                          borderRadius: 999,
-                        }}
-                      />
-                    </View>
-                  </Card>
-                );
-              })}
+                    <Text style={[styles.unitNet, { color: split.net >= 0 ? c.foreground : c.destructive }]}>
+                      {formatMoney(split.net, settings.currency)}
+                    </Text>
+                  </View>
+                </Card>
+              ))}
             </View>
           </View>
-        ) : null}
+        )}
 
-        {/* Recent expenses */}
         <View>
           <View style={[styles.rowBetween, { marginBottom: 10 }]}>
-            <Text
-              style={{
-                color: c.foreground,
-                fontFamily: "Inter_700Bold",
-                fontSize: 16,
-              }}
-            >
-              Recent expenses
-            </Text>
+            <Text style={styles.sectionTitle}>Recent expenses</Text>
             <Button
               label="Add"
               size="sm"
@@ -407,65 +259,15 @@ export default function FinanceScreen() {
           </View>
           <Card style={{ padding: 0 }}>
             {recentExpenses.length === 0 ? (
-              <EmptyState
-                icon="dollar-sign"
-                title="No expenses yet"
-                description="Track repairs, supplies, and bills here."
-              />
+              <EmptyState icon="dollar-sign" title="No expenses yet" description="Track your costs here." />
             ) : (
               recentExpenses.map((e, idx) => (
-                <View
-                  key={e.id}
-                  style={[
-                    styles.expenseRow,
-                    {
-                      borderTopColor: c.border,
-                      borderTopWidth: idx === 0 ? 0 : StyleSheet.hairlineWidth,
-                    },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.expenseIcon,
-                      { backgroundColor: c.accent, borderRadius: c.radius - 6 },
-                    ]}
-                  >
-                    <Feather name="tag" size={14} color={c.primary} />
-                  </View>
+                <View key={e.id} style={[styles.expenseRow, { borderTopColor: c.border, borderTopWidth: idx === 0 ? 0 : StyleSheet.hairlineWidth }]}>
                   <View style={{ flex: 1 }}>
-                    <Text
-                      style={{
-                        color: c.foreground,
-                        fontFamily: "Inter_600SemiBold",
-                        fontSize: 14,
-                      }}
-                    >
-                      {e.description || e.category}
-                    </Text>
-                    <Text
-                      style={{
-                        color: c.mutedForeground,
-                        fontFamily: "Inter_400Regular",
-                        fontSize: 11,
-                        marginTop: 2,
-                      }}
-                    >
-                      {e.category} ·{" "}
-                      {e.unitId === "all"
-                        ? "All units"
-                        : units.find((u) => u.id === e.unitId)?.name ?? "—"}{" "}
-                      · {formatLong(e.date)}
-                    </Text>
+                    <Text style={styles.expenseDesc}>{e.description || e.category}</Text>
+                    <Text style={styles.expenseMeta}>{formatLong(e.date)}</Text>
                   </View>
-                  <Text
-                    style={{
-                      color: c.destructive,
-                      fontFamily: "Inter_700Bold",
-                      fontSize: 14,
-                    }}
-                  >
-                    -{formatMoney(e.amount, settings.currency)}
-                  </Text>
+                  <Text style={styles.expenseAmount}>-{formatMoney(e.amount, settings.currency)}</Text>
                 </View>
               ))
             )}
@@ -476,295 +278,105 @@ export default function FinanceScreen() {
   );
 }
 
-function Row({
-  label,
-  value,
-  valueColor,
-}: {
-  label: string;
-  value: string;
-  valueColor?: string;
-}) {
+// Helper Components
+function Row({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
   const c = useColors();
   return (
     <View style={styles.rowBetween}>
-      <Text
-        style={{
-          color: c.mutedForeground,
-          fontFamily: "Inter_500Medium",
-          fontSize: 13,
-        }}
-      >
-        {label}
-      </Text>
-      <Text
-        style={{
-          color: valueColor ?? c.foreground,
-          fontFamily: "Inter_700Bold",
-          fontSize: 15,
-        }}
-      >
-        {value}
-      </Text>
+      <Text style={{ color: c.mutedForeground, fontFamily: "Inter_500Medium", fontSize: 13 }}>{label}</Text>
+      <Text style={{ color: valueColor ?? c.foreground, fontFamily: "Inter_700Bold", fontSize: 15 }}>{value}</Text>
     </View>
   );
 }
 
-function SplitBar({
-  investorPct,
-  operatorPct,
-}: {
-  investorPct: number;
-  operatorPct: number;
-}) {
+function SplitBar({ investorPct, operatorPct }: { investorPct: number; operatorPct: number }) {
   const c = useColors();
   return (
-    <View
-      style={{
-        height: 14,
-        flexDirection: "row",
-        borderRadius: 999,
-        overflow: "hidden",
-        backgroundColor: c.muted,
-      }}
-    >
-      <View
-        style={{
-          width: `${investorPct}%`,
-          backgroundColor: c.primary,
-        }}
-      />
-      <View
-        style={{
-          width: `${operatorPct}%`,
-          backgroundColor: c.warning,
-        }}
-      />
+    <View style={{ height: 12, flexDirection: "row", borderRadius: 6, overflow: "hidden", backgroundColor: c.muted }}>
+      <View style={{ width: `${investorPct}%`, backgroundColor: c.primary }} />
+      <View style={{ width: `${operatorPct}%`, backgroundColor: c.warning }} />
     </View>
   );
 }
 
-function UnitChip({
-  label,
-  active,
-  onPress,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}) {
+function UnitChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
   const c = useColors();
   return (
-    <Pressable onPress={onPress}>
-      <View
-        style={{
-          paddingVertical: 8,
-          paddingHorizontal: 14,
-          borderRadius: 999,
-          backgroundColor: active ? c.primary : c.muted,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: active ? c.primary : c.border,
-        }}
-      >
-        <Text
-          style={{
-            color: active ? c.primaryForeground : c.foreground,
-            fontFamily: "Inter_600SemiBold",
-            fontSize: 12,
-          }}
-        >
-          {label}
-        </Text>
-      </View>
+    <Pressable onPress={onPress} style={[styles.chip, { backgroundColor: active ? c.primary : c.muted, borderColor: active ? c.primary : c.border }]}>
+      <Text style={{ color: active ? c.primaryForeground : c.foreground, fontFamily: "Inter_600SemiBold", fontSize: 12 }}>{label}</Text>
     </Pressable>
   );
 }
 
-const CHANNEL_LABEL: Record<string, string> = {
-  direct: "Direct",
-  airbnb: "Airbnb",
-  booking: "Booking.com",
-  agoda: "Agoda",
-};
+// PDF Generators
+const CHANNEL_LABEL: Record<string, string> = { direct: "Direct", airbnb: "Airbnb", booking: "Booking.com", agoda: "Agoda" };
 
-function buildSingleUnitPdf(
-  unit: Unit,
-  bookings: Booking[],
-  expenses: Expense[],
-  settings: Settings,
-  range: { start: string; end: string } | undefined,
-  periodLabel: string,
-): string {
-  let unitBookings = bookings.filter(
-    (b) => b.unitId === unit.id && b.status !== "cancelled",
-  );
-  let unitExpenses = expenses.filter(
-    (e) => e.unitId === unit.id || e.unitId === "all",
-  );
-  if (range) {
-    unitBookings = unitBookings.filter(
-      (b) => b.checkIn < range.end && b.checkOut > range.start,
-    );
-    unitExpenses = unitExpenses.filter(
-      (e) => e.date >= range.start && e.date <= range.end,
-    );
-  }
-
-  const totalIncome = unitBookings.reduce((s, b) => s + bookingTotal(b), 0);
-  const totalExpensesNum = unitExpenses.reduce((s, e) => s + e.amount, 0);
-  const net = totalIncome - totalExpensesNum;
+function buildSingleUnitPdf(unit: Unit, bookings: Booking[], expenses: Expense[], settings: Settings, range: any, periodLabel: string) {
+  const unitBookings = bookings.filter(b => b.unitId === unit.id && b.status !== "cancelled");
+  const unitExpenses = expenses.filter(e => e.unitId === unit.id || e.unitId === "all");
+  const gross = unitBookings.reduce((s, b) => s + bookingTotal(b), 0);
+  const exps = unitExpenses.reduce((s, e) => s + e.amount, 0);
+  const net = gross - exps;
 
   return buildIncomeStatementHtml({
     unitName: unit.name,
     periodLabel,
-    startDate: range?.start ?? "—",
-    endDate: range?.end ?? "—",
-    bookings: unitBookings
-      .sort((a, b) => a.checkIn.localeCompare(b.checkIn))
-      .map((b) => {
-        const nights = Math.max(
-          0,
-          (parseISODate(b.checkOut).getTime() -
-            parseISODate(b.checkIn).getTime()) /
-            86400000,
-        );
-        return {
-          date: formatLong(b.checkIn),
-          guest: b.guestName,
-          channel: CHANNEL_LABEL[b.channel] ?? b.channel,
-          nights,
-          amount: formatMoney(bookingTotal(b), settings.currency),
-        };
-      }),
-    expenses: unitExpenses
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .map((e) => ({
-        date: formatLong(e.date),
-        category: e.category,
-        description: e.description,
-        amount: formatMoney(e.amount, settings.currency),
-      })),
-    totalIncome: formatMoney(totalIncome, settings.currency),
-    totalExpenses: formatMoney(totalExpensesNum, settings.currency),
+    startDate: range?.start ?? "Start",
+    endDate: range?.end ?? "End",
+    bookings: unitBookings.map(b => ({ date: formatLong(b.checkIn), guest: b.guestName, channel: CHANNEL_LABEL[b.channel] ?? b.channel, nights: 1, amount: formatMoney(bookingTotal(b), settings.currency) })),
+    expenses: unitExpenses.map(e => ({ date: formatLong(e.date), category: e.category, description: e.description, amount: formatMoney(e.amount, settings.currency) })),
+    totalIncome: formatMoney(gross, settings.currency),
+    totalExpenses: formatMoney(exps, settings.currency),
     netProfit: formatMoney(net, settings.currency),
     investorPct: settings.investorSharePct,
     operatorPct: settings.operatorSharePct,
-    investorShare: formatMoney(
-      (net * settings.investorSharePct) / 100,
-      settings.currency,
-    ),
-    operatorShare: formatMoney(
-      (net * settings.operatorSharePct) / 100,
-      settings.currency,
-    ),
-    generatedOn: new Date().toLocaleString(),
-    netNegative: net < 0,
+    investorShare: formatMoney((net * settings.investorSharePct) / 100, settings.currency),
+    operatorShare: formatMoney((net * settings.operatorSharePct) / 100, settings.currency),
+    generatedOn: new Date().toLocaleDateString(),
+    netNegative: net < 0
   });
 }
 
-function buildPortfolioPdf(
-  units: Unit[],
-  bookings: Booking[],
-  expenses: Expense[],
-  settings: Settings,
-  range: { start: string; end: string } | undefined,
-  periodLabel: string,
-): string {
-  let allBookings = bookings.filter((b) => b.status !== "cancelled");
-  let allExpenses = expenses;
-  if (range) {
-    allBookings = allBookings.filter(
-      (b) => b.checkIn < range.end && b.checkOut > range.start,
-    );
-    allExpenses = allExpenses.filter(
-      (e) => e.date >= range.start && e.date <= range.end,
-    );
-  }
-
-  const totalIncome = allBookings.reduce((s, b) => s + bookingTotal(b), 0);
-  const totalExpensesNum = allExpenses.reduce((s, e) => s + e.amount, 0);
-  const net = totalIncome - totalExpensesNum;
-  const unitName = (id: string) => units.find((u) => u.id === id)?.name ?? "—";
+function buildPortfolioPdf(units: Unit[], bookings: Booking[], expenses: Expense[], settings: Settings, range: any, periodLabel: string) {
+  const gross = bookings.filter(b => b.status !== "cancelled").reduce((s, b) => s + bookingTotal(b), 0);
+  const exps = expenses.reduce((s, e) => s + e.amount, 0);
+  const net = gross - exps;
 
   return buildIncomeStatementHtml({
-    unitName: "All Units · Portfolio",
+    unitName: "Portfolio (All Units)",
     periodLabel,
-    startDate: range?.start ?? "—",
-    endDate: range?.end ?? "—",
-    bookings: allBookings
-      .sort((a, b) => a.checkIn.localeCompare(b.checkIn))
-      .map((b) => {
-        const nights = Math.max(
-          0,
-          (parseISODate(b.checkOut).getTime() -
-            parseISODate(b.checkIn).getTime()) /
-            86400000,
-        );
-        return {
-          date: `${formatLong(b.checkIn)} (${unitName(b.unitId)})`,
-          guest: b.guestName,
-          channel: CHANNEL_LABEL[b.channel] ?? b.channel,
-          nights,
-          amount: formatMoney(bookingTotal(b), settings.currency),
-        };
-      }),
-    expenses: allExpenses
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .map((e) => ({
-        date: `${formatLong(e.date)} (${e.unitId === "all" ? "All units" : unitName(e.unitId)})`,
-        category: e.category,
-        description: e.description,
-        amount: formatMoney(e.amount, settings.currency),
-      })),
-    totalIncome: formatMoney(totalIncome, settings.currency),
-    totalExpenses: formatMoney(totalExpensesNum, settings.currency),
+    startDate: range?.start ?? "Start",
+    endDate: range?.end ?? "End",
+    bookings: bookings.map(b => ({ date: formatLong(b.checkIn), guest: b.guestName, channel: CHANNEL_LABEL[b.channel] ?? b.channel, nights: 1, amount: formatMoney(bookingTotal(b), settings.currency) })),
+    expenses: expenses.map(e => ({ date: formatLong(e.date), category: e.category, description: e.description, amount: formatMoney(e.amount, settings.currency) })),
+    totalIncome: formatMoney(gross, settings.currency),
+    totalExpenses: formatMoney(exps, settings.currency),
     netProfit: formatMoney(net, settings.currency),
     investorPct: settings.investorSharePct,
     operatorPct: settings.operatorSharePct,
-    investorShare: formatMoney(
-      (net * settings.investorSharePct) / 100,
-      settings.currency,
-    ),
-    operatorShare: formatMoney(
-      (net * settings.operatorSharePct) / 100,
-      settings.currency,
-    ),
-    generatedOn: new Date().toLocaleString(),
-    netNegative: net < 0,
+    investorShare: formatMoney((net * settings.investorSharePct) / 100, settings.currency),
+    operatorShare: formatMoney((net * settings.operatorSharePct) / 100, settings.currency),
+    generatedOn: new Date().toLocaleDateString(),
+    netNegative: net < 0
   });
 }
 
 const styles = StyleSheet.create({
-  divider: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  rowBetween: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  splitRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  barTrack: {
-    height: 6,
-    width: "100%",
-    marginTop: 12,
-    overflow: "hidden",
-  },
-  expenseRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 12,
-  },
-  expenseIcon: {
-    width: 32,
-    height: 32,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  divider: { borderTopWidth: StyleSheet.hairlineWidth },
+  rowBetween: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  statLabel: { color: "#64748b", fontFamily: "Inter_500Medium", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5 },
+  statValue: { fontFamily: "Inter_700Bold", fontSize: 32, marginTop: 4 },
+  cardTitle: { fontFamily: "Inter_700Bold", fontSize: 16 },
+  cardSubtitle: { color: "#64748b", fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 },
+  splitRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  splitValue: { fontFamily: "Inter_700Bold", fontSize: 22, marginTop: 4 },
+  sectionTitle: { fontFamily: "Inter_700Bold", fontSize: 16 },
+  unitName: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  unitDetails: { color: "#64748b", fontSize: 11, marginTop: 2 },
+  unitNet: { fontFamily: "Inter_700Bold", fontSize: 15 },
+  expenseRow: { flexDirection: "row", alignItems: "center", padding: 14, gap: 12 },
+  expenseDesc: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  expenseMeta: { color: "#64748b", fontSize: 11, marginTop: 2 },
+  expenseAmount: { color: "#ef4444", fontFamily: "Inter_700Bold", fontSize: 14 },
+  chip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999, borderWidth: StyleSheet.hairlineWidth }
 });
