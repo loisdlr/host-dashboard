@@ -12,94 +12,95 @@ import { useColors } from "@/hooks/useColors";
 import { useRental } from "@/contexts/RentalContext";
 import { todayISO } from "@/utils/date";
 
-const CATEGORIES = [
-  "Cleaning",
-  "Subscription",
-  "Electricity",
-  "Water",
-  "Internet",
-  "Complimentary Supplies",
-  "Cleaning Supplies",
-  "Maintenance & Repairs",
-  "IFAE",
-  "Rent",
-  "Others",
-];
-
-export default function NewExpense() {
+export default function NewExpenseScreen() {
   const c = useColors();
   const router = useRouter();
-  const { units, addExpense } = useRental();
+  const { units, addExpense, settings } = useRental();
 
-  const [unitId, setUnitId] = useState<string>(units[0]?.id ?? "all");
-  const [date, setDate] = useState(todayISO());
-  const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState("Complimentary Supplies");
   const [description, setDescription] = useState("");
+  const [amount, setAmount] = useState("");
+  const [date, setDate] = useState(todayISO());
+  const [unitId, setUnitId] = useState(units[0]?.id ?? "");
+  const [category, setCategory] = useState("Maintenance");
 
   const submit = () => {
     const value = Number(amount);
-    if (!value || value <= 0) {
-      Alert.alert("Enter an amount");
+    if (!description.trim() || !value) {
+      Alert.alert("Error", "Please enter a description and valid amount");
       return;
     }
+
     addExpense({
-      unitId,
-      date,
-      amount: value,
-      category,
       description: description.trim(),
+      amount: value,
+      date,
+      unitId,
+      category,
     });
+
     router.back();
   };
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
       <ScreenHeader
-        title="New expense"
-        leftIcon="x"
+        title="New Expense"
+        leftIcon="chevron-left"
         onLeftPress={() => router.back()}
       />
+
       <KeyboardAwareScrollViewCompat
-        contentContainerStyle={{ padding: 16, paddingBottom: 80 }}
-        keyboardShouldPersistTaps="handled"
-        bottomOffset={20}
+        contentContainerStyle={{ padding: 16, gap: 16 }}
       >
-        <Picker
-          label="Unit"
-          value={unitId}
-          options={[
-            { value: "all", label: "All units" },
-            ...units.map((u) => ({ value: u.id, label: u.name })),
-          ]}
-          onChange={setUnitId}
+        <Field
+          label="Description"
+          placeholder="e.g. Electricity bill, Repairs"
+          value={description}
+          onChangeText={setDescription}
         />
-        <Picker
-          label="Category"
-          value={category}
-          options={CATEGORIES.map((c) => ({ value: c, label: c }))}
-          onChange={setCategory}
-        />
-        <DateInput label="Date" value={date} onChange={setDate} />
+
         <Field
           label="Amount"
+          placeholder="0.00"
           value={amount}
           onChangeText={setAmount}
           keyboardType="numeric"
-          placeholder="0"
         />
-        <Field
-          label="Description"
-          value={description}
-          onChangeText={setDescription}
-          placeholder="What was this for?"
+
+        <DateInput 
+          label="Date" 
+          value={date} 
+          onChange={setDate} 
         />
-        <View style={{ marginTop: 8 }}>
-          <Button label="Save expense" onPress={submit} fullWidth />
+
+        <Picker
+          label="Unit"
+          value={unitId}
+          options={units.map((u) => ({ label: u.name, value: u.id }))}
+          onChange={setUnitId}
+        />
+
+        <Picker
+          label="Category"
+          value={category}
+          options={[
+            { label: "Maintenance", value: "Maintenance" },
+            { label: "Utilities", value: "Utilities" },
+            { label: "Supplies", value: "Supplies" },
+            { label: "Marketing", value: "Marketing" },
+            { label: "Other", value: "Other" },
+          ]}
+          onChange={setCategory}
+        />
+
+        <View style={{ marginTop: 10 }}>
+          <Button label="Save Expense" onPress={submit} fullWidth />
         </View>
       </KeyboardAwareScrollViewCompat>
     </View>
   );
 }
 
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({
+  // Add any custom styles here
+});
