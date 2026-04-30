@@ -5,15 +5,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
 import { useRental } from "@/contexts/RentalContext";
-import { Card } from "@/components/Card";
-import { Button } from "@/components/Button";
 import { ScreenHeader } from "@/components/ScreenHeader";
 
 export default function CleanersScreen() {
   const c = useColors();
   const insets = useSafeAreaInsets();
-  
-  // We take the raw setters too, just in case the wrapper functions are bugged
   const { cleaners, deleteCleaner, updateCleaner, addCleaner, reset } = useRental();
   
   const [isAddVisible, setAddVisible] = useState(false);
@@ -21,103 +17,81 @@ export default function CleanersScreen() {
   const [selectedCleaner, setSelectedCleaner] = useState<any>(null);
   const [newName, setNewName] = useState("");
 
-  // FORCE DELETE LOGIC
-  const forceDelete = (id: string) => {
-    console.log("Nuclear Delete initiated for:", id);
-    deleteCleaner(id);
-    // If it still doesn't disappear, we know the context filter is the issue
+  const handleAdd = () => {
+    if (!newName.trim()) return;
+    addCleaner({ name: newName.trim(), phone: "", ratePerClean: 450 });
+    setNewName("");
+    setAddVisible(false);
+  };
+
+  const handleUpdate = () => {
+    if (selectedCleaner?.id) {
+      updateCleaner(selectedCleaner.id, { name: selectedCleaner.name });
+      setEditVisible(false);
+      setSelectedCleaner(null);
+    }
   };
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
       <ScreenHeader 
-        title="Cleaners" 
+        title="Staff Management" 
         rightIcon="plus" 
         onRightPress={() => setAddVisible(true)} 
       />
       
-      <ScrollView 
-        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 100, gap: 12 }}
-      >
-        {cleaners.map((item, index) => (
-          <Card key={`${item.id}-${index}`} style={styles.card}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 50 }}>
+        {cleaners.map((item) => (
+          <View key={item.id} style={[styles.itemRow, { borderBottomColor: c.border }]}>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontWeight: '700', color: c.foreground }}>{item.name}</Text>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: c.foreground }}>{item.name}</Text>
               <Text style={{ fontSize: 10, color: c.mutedForeground }}>ID: {item.id}</Text>
             </View>
-            
+
             <View style={{ flexDirection: 'row', gap: 20 }}>
-              <Pressable 
-                onPress={() => { setSelectedCleaner({...item}); setEditVisible(true); }}
-                style={styles.iconBtn}
-              >
+              <Pressable onPress={() => { setSelectedCleaner({...item}); setEditVisible(true); }}>
                 <Feather name="edit-2" size={20} color={c.primary} />
               </Pressable>
-              
-              <Pressable 
-                onPress={() => {
-                  Alert.alert("Delete?", `Remove ${item.name}?`, [
-                    { text: "Cancel" },
-                    { text: "Delete", style: "destructive", onPress: () => forceDelete(item.id) }
-                  ]);
-                }}
-                style={styles.iconBtn}
-              >
+
+              <Pressable onPress={() => {
+                Alert.alert("Delete", `Remove ${item.name}?`, [
+                  { text: "Cancel" },
+                  { text: "Delete", style: "destructive", onPress: () => deleteCleaner(item.id) }
+                ]);
+              }}>
                 <Feather name="trash-2" size={20} color={c.destructive} />
               </Pressable>
             </View>
-          </Card>
+          </View>
         ))}
 
-        {/* EMERGENCY RESET - This is now at the very bottom */}
-        <View style={{ marginTop: 50, padding: 20, backgroundColor: '#fee2e2', borderRadius: 12 }}>
-            <Text style={{ color: '#b91c1c', fontWeight: 'bold', textAlign: 'center' }}>EMERGENCY TOOLS</Text>
-            <Pressable 
-                onPress={() => reset()} 
-                style={{ backgroundColor: '#ef4444', padding: 15, borderRadius: 8, marginTop: 10 }}
-            >
-                <Text style={{ color: 'white', textAlign: 'center', fontWeight: '600' }}>WIPE ALL DATA (RESET)</Text>
-            </Pressable>
-        </View>
+        <Pressable 
+          onPress={() => Alert.alert("Reset", "Wipe all data?", [{ text: "No" }, { text: "Yes", onPress: reset }])}
+          style={{ marginTop: 40, padding: 15, backgroundColor: '#fee2e2', borderRadius: 8 }}
+        >
+          <Text style={{ color: '#ef4444', textAlign: 'center', fontWeight: 'bold' }}>HARD RESET DATA</Text>
+        </Pressable>
       </ScrollView>
 
-      {/* MODALS */}
-      <Modal visible={isAddVisible} animationType="fade">
-        <View style={{ flex: 1, backgroundColor: c.background, justifyContent: 'center', padding: 20 }}>
-          <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 20, color: c.foreground }}>New Staff</Text>
+      {/* ADD MODAL */}
+      <Modal visible={isAddVisible} animationType="slide" transparent={false}>
+        <View style={{ flex: 1, backgroundColor: c.background, padding: 20, paddingTop: 60 }}>
+          <Text style={{ fontSize: 24, fontWeight: 'bold', color: c.foreground, marginBottom: 20 }}>Add Staff</Text>
           <TextInput 
             style={[styles.input, { borderColor: c.border, color: c.foreground }]}
             value={newName}
             onChangeText={setNewName}
-            placeholder="Name"
+            placeholder="Name..."
+            placeholderTextColor="#999"
           />
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
-            <Button label="Cancel" variant="secondary" onPress={() => setAddVisible(false)} style={{ flex: 1 }} />
-            <Button label="Save" onPress={() => { addCleaner({ name: newName }); setAddVisible(false); setNewName(""); }} style={{ flex: 1 }} />
+          <View style={styles.modalButtons}>
+            <Pressable onPress={() => setAddVisible(false)} style={styles.cancelBtn}><Text>Cancel</Text></Pressable>
+            <Pressable onPress={handleAdd} style={styles.saveBtn}><Text style={{ color: 'white' }}>Save</Text></Pressable>
           </View>
         </View>
       </Modal>
 
-      <Modal visible={isEditVisible} animationType="fade">
-        <View style={{ flex: 1, backgroundColor: c.background, justifyContent: 'center', padding: 20 }}>
-          <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 20, color: c.foreground }}>Edit Staff</Text>
-          <TextInput 
-            style={[styles.input, { borderColor: c.border, color: c.foreground }]}
-            value={selectedCleaner?.name}
-            onChangeText={(t) => setSelectedCleaner({...selectedCleaner, name: t})}
-          />
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
-            <Button label="Cancel" variant="secondary" onPress={() => setEditVisible(false)} style={{ flex: 1 }} />
-            <Button label="Update" onPress={() => { updateCleaner(selectedCleaner.id, { name: selectedCleaner.name }); setEditVisible(false); }} style={{ flex: 1 }} />
-          </View>
-        </View>
-      </Modal>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  card: { flexDirection: 'row', padding: 20, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#eee' },
-  iconBtn: { padding: 5 },
-  input: { borderWidth: 1, padding: 15, borderRadius: 10, fontSize: 18 }
-});
+      {/* EDIT MODAL */}
+      <Modal visible={isEditVisible} animationType="slide" transparent={false}>
+        <View style={{ flex: 1, backgroundColor: c.background, padding: 20, paddingTop: 60 }}>
+          <Text style={{ fontSize: 24, fontWeight: 'bold', color: c.foreground, marginBottom: 20 }}>Edit Staff</Text
