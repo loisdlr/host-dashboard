@@ -45,7 +45,6 @@ export default function CleanersScreen() {
           <View key={item.id} style={[styles.itemRow, { borderBottomColor: c.border }]}>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 16, fontWeight: '600', color: c.foreground }}>{item.name}</Text>
-              <Text style={{ fontSize: 10, color: c.mutedForeground }}>ID: {item.id}</Text>
             </View>
 
             <View style={{ flexDirection: 'row', gap: 20 }}>
@@ -94,4 +93,26 @@ export default function CleanersScreen() {
       {/* EDIT MODAL */}
       <Modal visible={isEditVisible} animationType="slide" transparent={false}>
         <View style={{ flex: 1, backgroundColor: c.background, padding: 20, paddingTop: 60 }}>
-          <Text style={{ fontSize: 24, fontWeight: 'bold', color: c.foreground, marginBottom: 20 }}>Edit Staff</Text
+          <Text style={{ fontSize: 24, fontWeight: 'bold', color: c.foreground, marginBottom: 20 }}>Edit Staff</Text>
+          <TextInput 
+            style={[styles.input, { borderColor: c.border, color: c.foreground }]}
+            value={selectedCleaner?.name}
+            onChangeText={(t) => setSelectedCleaner(selectedCleaner ? { ...selectedCleaner, name: t } : null)}
+          />
+          <View style={styles.modalButtons}>
+            <Pressable onPress={() => setEditVisible(false)} style={styles.cancelBtn}><Text>Cancel</Text></Pressable>
+            <Pressable onPress={handleUpdate} style={styles.saveBtn}><Text style={{ color: 'white' }}>Update</Text></Pressable>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  itemRow: { flexDirection: 'row', paddingVertical: 16, alignItems: 'center', borderBottomWidth: 1 },
+  input: { borderWidth: 1, padding: 15, borderRadius: 10, fontSize: 18, marginBottom: 20 },
+  modalButtons: { flexDirection: 'row', gap: 10 },
+  cancelBtn: { flex: 1, padding: 15, backgroundColor: '#eee', borderRadius: 10, alignItems: 'center' },
+  saveBtn: { flex: 1, padding: 15, backgroundColor: '#007AFF', borderRadius: 10, alignItems: 'center' }
+});
