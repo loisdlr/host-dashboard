@@ -44,7 +44,6 @@ export default function FinanceScreen() {
   const [unitId, setUnitId] = useState<"all" | string>("all");
   const [period, setPeriod] = useState<Period>("month");
 
-  // Date Range
   const range = useMemo(() => {
     const now = parseISODate(todayISO());
     if (period === "month") {
@@ -59,7 +58,6 @@ export default function FinanceScreen() {
     return undefined; // All time
   }, [period]);
 
-  // Calculations
   const result = useMemo(() => {
     if (unitId === "all") return splitForAll(bookings, expenses, settings, range);
     return splitForUnit(unitId, bookings, expenses, settings, range);
@@ -81,7 +79,9 @@ export default function FinanceScreen() {
   // ==================== PDF EXPORT ====================
   const onExportPdf = async () => {
     try {
-      const targetUnits = unitId === "all" ? units : units.filter((u) => u.id === unitId);
+      const targetUnits = unitId === "all" 
+        ? units 
+        : units.filter((u) => u.id === unitId);
 
       if (targetUnits.length === 0) {
         Alert.alert("No unit selected");
@@ -97,7 +97,7 @@ export default function FinanceScreen() {
               body { font-family: Arial, sans-serif; padding: 30px; }
               h1 { text-align: center; }
               table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-              th, td { border: 1px solid #ddd; padding: 8px; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
               th { background-color: #f0f0f0; }
             </style>
           </head>
@@ -145,7 +145,13 @@ export default function FinanceScreen() {
         onRightPress={() => router.push("/settings")}
       />
 
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 100, gap: 16 }}>
+      <ScrollView 
+        contentContainerStyle={{ 
+          padding: 16, 
+          paddingBottom: insets.bottom + 100, 
+          gap: 16 
+        }}
+      >
         <SegmentedControl
           options={[
             { value: "month", label: "Month" },
@@ -156,4 +162,90 @@ export default function FinanceScreen() {
           onChange={(v) => setPeriod(v as Period)}
         />
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          contentContainerStyle={{ gap: 8 }}
+        >
+          <UnitChip label="All units" active={unitId === "all"} onPress={() => setUnitId("all")} />
+          {units.map((u) => (
+            <UnitChip 
+              key={u.id} 
+              label={u.name} 
+              active={unitId === u.id} 
+              onPress={() => setUnitId(u.id)} 
+            />
+          ))}
+        </ScrollView>
+
+        <Button
+          label="Generate Income PDF"
+          variant="secondary"
+          icon={<Feather name="file-text" size={18} color={c.foreground} />}
+          onPress={onExportPdf}
+          fullWidth
+        />
+
+        <Card>
+          <Text style={{ fontSize: 13, color: c.mutedForeground }}>Net Profit • {periodLabel}</Text>
+          <Text style={{ fontSize: 28, fontWeight: "700", marginTop: 8, color: result.net >= 0 ? c.foreground : c.destructive }}>
+            {formatMoney(result.net, settings.currency)}
+          </Text>
+        </Card>
+
+        <Card>
+          <Text style={{ fontSize: 16, fontWeight: "700", marginBottom: 12 }}>Recent Expenses</Text>
+          {filteredExpenses.length === 0 ? (
+            <EmptyState 
+              icon="dollar-sign" 
+              title="No expenses" 
+              description="No expenses found in this period." 
+            />
+          ) : (
+            filteredExpenses.slice(0, 6).map((e) => (
+              <View key={e.id} style={styles.expenseItem}>
+                <Text style={{ flex: 1 }}>{e.description || e.category}</Text>
+                <Text style={{ color: "#ef4444", fontWeight: "600" }}>
+                  -{formatMoney(e.amount, settings.currency)}
+                </Text>
+              </View>
+            ))
+          )}
+        </Card>
+      </ScrollView>
+    </View>
+  );
+}
+
+// Simple UnitChip Component
+function UnitChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  const c = useColors();
+  return (
+    <Pressable onPress={onPress}>
+      <View style={{
+        paddingVertical: 8,
+        paddingHorizontal: 14,
+        borderRadius: 999,
+        backgroundColor: active ? c.primary : c.muted,
+      }}>
+        <Text style={{ 
+          color: active ? "white" : c.foreground, 
+          fontWeight: "600", 
+          fontSize: 12 
+        }}>
+          {label}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  expenseItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+});
