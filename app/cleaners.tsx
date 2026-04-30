@@ -27,9 +27,10 @@ export default function CleanersScreen() {
   const [newName, setNewName] = useState("");
 
   const openEdit = (cleaner: any) => {
-    setSelectedCleaner({ ...cleaner });
-    setEditVisible(true);
-  };
+  console.log("Opening edit for:", cleaner);   // ← Add this
+  setSelectedCleaner({ ...cleaner });
+  setEditVisible(true);
+};
 
   const handleUpdate = () => {
     if (selectedCleaner?.id && selectedCleaner.name?.trim()) {
@@ -40,27 +41,32 @@ export default function CleanersScreen() {
   };
 
   const handleDelete = () => {
-    console.log("=== DELETE BUTTON PRESSED ===", selectedCleaner?.id);
+  console.log("Delete button pressed");
+  console.log("selectedCleaner:", selectedCleaner);
 
-    if (!selectedCleaner?.id) return;
+  if (!selectedCleaner || !selectedCleaner.id) {
+    Alert.alert("Error", "No staff member selected or missing ID");
+    return;
+  }
 
-    Alert.alert(
-      "Confirm Delete",
-      `Are you sure you want to remove "${selectedCleaner.name}"?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            deleteCleaner(selectedCleaner.id);
-            setEditVisible(false);
-            setSelectedCleaner(null);
-          },
+  Alert.alert(
+    "Confirm Delete",
+    `Are you sure you want to remove "${selectedCleaner.name}"?`,
+    [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => {
+          console.log("User confirmed delete for ID:", selectedCleaner.id);
+          deleteCleaner(selectedCleaner.id);
+          setEditVisible(false);
+          setSelectedCleaner(null);
         },
-      ]
-    );
-  };
+      },
+    ]
+  );
+};
 
   const handleAdd = () => {
     if (newName.trim()) {
