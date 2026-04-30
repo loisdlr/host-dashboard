@@ -32,7 +32,6 @@ import {
   splitForAll,
   splitForUnit,
 } from "@/utils/finance";
-import { buildSingleUnitPdf, buildPortfolioPdf, exportPdf } from "@/utils/pdf";
 import type { Expense } from "@/types";
 
 type Period = "month" | "ytd" | "all";
@@ -78,38 +77,9 @@ export default function FinanceScreen() {
 
   const periodLabel = period === "month" ? "This month" : period === "ytd" ? "Year to date" : "All time";
 
-  // ==================== PDF EXPORT ====================
-  const onExportPdf = async () => {
-    try {
-      const targetUnits = unitId === "all" 
-        ? units 
-        : units.filter((u) => u.id === unitId);
-
-      if (targetUnits.length === 0) {
-        alert("No units available.");
-        return;
-      }
-
-      // Safety check for PDF functions
-      if (typeof buildPortfolioPdf !== "function" || typeof buildSingleUnitPdf !== "function") {
-        alert("PDF generation is not available yet. Please check utils/pdf file.");
-        return;
-      }
-
-      const html = unitId === "all"
-        ? buildPortfolioPdf(units, bookings, expenses, settings, range, periodLabel)
-        : buildSingleUnitPdf(targetUnits[0]!, bookings, expenses, settings, range, periodLabel);
-
-      await exportPdf({
-        html,
-        filename: `${unitId === "all" ? "Portfolio" : (targetUnits[0]?.name ?? "Unit")}-Statement.pdf`,
-      });
-
-      alert("✅ PDF exported successfully!");
-    } catch (error: any) {
-      console.error("PDF Export Error:", error);
-      alert(`Export failed: ${error.message || "Unknown error"}`);
-    }
+  // ==================== PDF EXPORT (Temporarily Disabled) ====================
+  const onExportPdf = () => {
+    alert("PDF export is not fully implemented yet.\n\nThis feature will be available soon.");
   };
 
   // ==================== DELETE EXPENSE ====================
@@ -127,7 +97,7 @@ export default function FinanceScreen() {
     swipeable?.close();
   };
 
-  // Right swipe actions - Only Delete
+  // Swipe Right Action - Only Delete
   const renderRightActions = (
     prog: SharedValue<number>,
     drag: SharedValue<number>,
@@ -177,7 +147,7 @@ export default function FinanceScreen() {
           onChange={(v) => setPeriod(v as Period)}
         />
 
-        {/* Unit Filter Chips */}
+        {/* Unit Filter */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
           <UnitChip label="All units" active={unitId === "all"} onPress={() => setUnitId("all")} />
           {units.map((u) => (
@@ -218,7 +188,7 @@ export default function FinanceScreen() {
           </View>
         </Card>
 
-        {/* Profit Distribution */}
+        {/* Profit Distribution Card */}
         <Card>
           <View style={styles.rowBetween}>
             <View>
@@ -275,9 +245,7 @@ export default function FinanceScreen() {
                   key={e.id}
                   friction={2}
                   rightThreshold={60}
-                  renderRightActions={(prog, drag, sw) =>
-                    renderRightActions(prog, drag, sw, e.id)
-                  }
+                  renderRightActions={(prog, drag, sw) => renderRightActions(prog, drag, sw, e.id)}
                 >
                   <Pressable
                     onPress={() => router.push(`/expense/${e.id}`)}
@@ -349,13 +317,7 @@ function UnitChip({ label, active, onPress }: { label: string; active: boolean; 
           borderColor: active ? c.primary : c.border,
         }}
       >
-        <Text
-          style={{
-            color: active ? c.primaryForeground : c.foreground,
-            fontWeight: "600",
-            fontSize: 12,
-          }}
-        >
+        <Text style={{ color: active ? c.primaryForeground : c.foreground, fontWeight: "600", fontSize: 12 }}>
           {label}
         </Text>
       </View>
@@ -365,7 +327,7 @@ function UnitChip({ label, active, onPress }: { label: string; active: boolean; 
 
 const styles = StyleSheet.create({
   rowBetween: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  sectionTitle: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#1f2937" },
+  sectionTitle: { fontFamily: "Inter_700Bold", fontSize: 16 },
   subText: { fontFamily: "Inter_400Regular", fontSize: 12, color: "#6b7280" },
   splitRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   splitLabel: { fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, color: "#6b7280" },
