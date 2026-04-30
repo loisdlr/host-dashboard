@@ -33,11 +33,8 @@ export default function CleanersScreen() {
         text: "Delete Staff", 
         style: "destructive", 
         onPress: () => {
-          // 1. Call the delete function
           deleteCleaner(selectedCleaner.id);
-          // 2. Close the modal immediately
           setEditVisible(false);
-          // 3. Clear selection
           setSelectedCleaner(null);
         } 
       }
@@ -46,39 +43,35 @@ export default function CleanersScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
-      <ScreenHeader 
-        title="Staff" 
-        rightIcon="plus" 
-        onRightPress={() => setAddVisible(true)} 
-      />
+      <ScreenHeader title="Staff" rightIcon="plus" onRightPress={() => setAddVisible(true)} />
       
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 50 }}>
         {cleaners.map((item) => (
-  <Pressable 
-    key={item.id} 
-    onPress={() => { setSelectedCleaner({...item}); setEditVisible(true); }}
-    style={styles.itemRow}
-  >
-    <View style={{ flex: 1 }}>
-      <Text style={{ fontSize: 16, fontWeight: '600', color: c.foreground }}>{item.name}</Text>
-      {/* ADD THIS LINE BELOW */}
-      <Text style={{ fontSize: 10, color: 'red' }}>Debug ID: {item.id || "MISSING"}</Text>
-    </View>
-    <Feather name="edit" size={18} color={c.primary} />
-  </Pressable>
-))}
+          <Pressable 
+            key={item.id} 
+            onPress={() => { setSelectedCleaner({...item}); setEditVisible(true); }}
+            style={styles.itemRow}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: c.foreground }}>{item.name}</Text>
+              <Text style={{ fontSize: 10, color: '#999' }}>ID: {item.id ? String(item.id).slice(0,8) : 'MISSING'}</Text>
+            </View>
+            <Feather name="edit-2" size={18} color={c.primary} />
+          </Pressable>
+        ))}
+      </ScrollView>
 
       {/* EDIT MODAL */}
-      <Modal visible={isEditVisible} animationType="slide">
+      <Modal visible={isEditVisible} animationType="slide" transparent={false}>
         <View style={{ flex: 1, backgroundColor: c.background, padding: 20, paddingTop: 60 }}>
           <Text style={styles.modalTitle}>Edit Staff</Text>
           <TextInput 
             style={[styles.input, { borderColor: c.border, color: c.foreground }]}
-            value={selectedCleaner?.name}
+            value={selectedCleaner?.name || ''}
             onChangeText={(t) => setSelectedCleaner({ ...selectedCleaner, name: t })}
           />
           
-          <View style={{ flexDirection: 'row', gap: 12, marginTop: 10 }}>
+          <View style={{ flexDirection: 'row', gap: 12 }}>
             <Pressable onPress={() => setEditVisible(false)} style={styles.cancelBtn}><Text>Cancel</Text></Pressable>
             <Pressable onPress={handleUpdate} style={styles.saveBtn}><Text style={{ color: 'white' }}>Update</Text></Pressable>
           </View>
@@ -89,15 +82,32 @@ export default function CleanersScreen() {
           </Pressable>
         </View>
       </Modal>
+
+      {/* ADD MODAL */}
+      <Modal visible={isAddVisible} animationType="slide" transparent={false}>
+        <View style={{ flex: 1, backgroundColor: c.background, padding: 20, paddingTop: 60 }}>
+          <Text style={styles.modalTitle}>New Staff</Text>
+          <TextInput 
+            style={[styles.input, { borderColor: c.border, color: c.foreground }]}
+            value={newName}
+            onChangeText={setNewName}
+            placeholder="Name..."
+          />
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <Pressable onPress={() => setAddVisible(false)} style={styles.cancelBtn}><Text>Cancel</Text></Pressable>
+            <Pressable onPress={() => { addCleaner({ name: newName }); setAddVisible(false); setNewName(""); }} style={styles.saveBtn}><Text style={{ color: 'white' }}>Save</Text></Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  itemRow: { flexDirection: 'row', paddingVertical: 20, alignItems: 'center', borderBottomWidth: 1 },
+  itemRow: { flexDirection: 'row', paddingVertical: 20, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#eee' },
   modalTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 20 },
   input: { borderWidth: 1, padding: 15, borderRadius: 12, fontSize: 18, marginBottom: 20 },
   cancelBtn: { flex: 1, padding: 16, backgroundColor: '#f3f4f6', borderRadius: 12, alignItems: 'center' },
   saveBtn: { flex: 1, padding: 16, backgroundColor: '#007AFF', borderRadius: 12, alignItems: 'center' },
-  deleteBtn: { marginTop: 40, padding: 16, borderRadius: 12, backgroundColor: '#fff5f5', flexDirection: 'row', justifyContent: 'center' }
+  deleteBtn: { marginTop: 'auto', padding: 16, borderRadius: 12, backgroundColor: '#fff5f5', flexDirection: 'row', justifyContent: 'center', marginBottom: 40 }
 });
