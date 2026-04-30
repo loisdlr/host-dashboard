@@ -78,8 +78,7 @@ export default function FinanceScreen() {
 
   const periodLabel = period === "month" ? "This month" : period === "ytd" ? "Year to date" : "All time";
 
-  // ==================== HANDLERS ====================
-
+  // ==================== PDF EXPORT ====================
   const onExportPdf = async () => {
     try {
       const targetUnits = unitId === "all" 
@@ -87,7 +86,13 @@ export default function FinanceScreen() {
         : units.filter((u) => u.id === unitId);
 
       if (targetUnits.length === 0) {
-        alert("No unit selected");
+        alert("No units available.");
+        return;
+      }
+
+      // Safety check for PDF functions
+      if (typeof buildPortfolioPdf !== "function" || typeof buildSingleUnitPdf !== "function") {
+        alert("PDF generation is not available yet. Please check utils/pdf file.");
         return;
       }
 
@@ -100,59 +105,46 @@ export default function FinanceScreen() {
         filename: `${unitId === "all" ? "Portfolio" : (targetUnits[0]?.name ?? "Unit")}-Statement.pdf`,
       });
 
-      alert("PDF exported successfully!");
-    } catch (e) {
-      const message = e instanceof Error ? e.message : "Could not export PDF.";
-      alert(`Export failed: ${message}`);
+      alert("✅ PDF exported successfully!");
+    } catch (error: any) {
+      console.error("PDF Export Error:", error);
+      alert(`Export failed: ${error.message || "Unknown error"}`);
     }
   };
 
+  // ==================== DELETE EXPENSE ====================
   const handleDeleteExpense = (id: string, swipeable?: SwipeableMethods) => {
-    const expense = expenses.find(e => e.id === id);
+    const expense = expenses.find((e) => e.id === id);
     if (!expense) return;
 
     const confirmed = window.confirm(
-      `Are you sure you want to delete this expense?\n\n${expense.description || expense.category} - ${formatMoney(expense.amount, settings.currency)}`
+      `Delete this expense?\n\n${expense.description || expense.category}\nAmount: ${formatMoney(expense.amount, settings.currency)}`
     );
 
     if (confirmed) {
       deleteExpense(id);
-      swipeable?.close();
-    } else {
-      swipeable?.close();
     }
-  };
-
-  const handleEditExpense = (id: string, swipeable?: SwipeableMethods) => {
     swipeable?.close();
-    router.push(`/expense/${id}`);
   };
 
-  // Right Swipe Actions
+  // Right swipe actions - Only Delete
   const renderRightActions = (
     prog: SharedValue<number>,
     drag: SharedValue<number>,
     swipeable: SwipeableMethods,
     expenseId: string
   ) => {
-    const styleAnimation = useAnimatedStyle(() => ({
-      transform: [{ translateX: drag.value + 160 }],
+    const animatedStyle = useAnimatedStyle(() => ({
+      transform: [{ translateX: drag.value + 100 }],
     }));
 
     return (
-      <Reanimated.View style={[styleAnimation, styles.actionsContainer]}>
-        <TouchableOpacity
-          onPress={() => handleEditExpense(expenseId, swipeable)}
-          style={[styles.actionButton, { backgroundColor: c.accent }]}
-        >
-          <Feather name="edit-2" size={20} color={c.primary} />
-        </TouchableOpacity>
-
+      <Reanimated.View style={[animatedStyle, styles.actionsContainer]}>
         <TouchableOpacity
           onPress={() => handleDeleteExpense(expenseId, swipeable)}
           style={[styles.actionButton, { backgroundColor: "#ef4444" }]}
         >
-          <Feather name="trash-2" size={20} color="white" />
+          <Feather name="trash-2" size={22} color="white" />
         </TouchableOpacity>
       </Reanimated.View>
     );
@@ -160,14 +152,21 @@ export default function FinanceScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
-      <ScreenHeader 
-        title="Finance" 
-        subtitle={periodLabel} 
-        rightIcon="settings" 
-        onRightPress={() => router.push("/settings")} 
+      <ScreenHeader
+        title="Finance"
+        subtitle={periodLabel}
+        rightIcon="settings"
+        onRightPress={() => router.push("/settings")}
       />
 
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 110, gap: 16 }}>
+      <ScrollView
+        contentContainerStyle={{
+          padding: 16,
+          paddingBottom: insets.bottom + 110,
+          gap: 16,
+        }}
+      >
+        {/* Period Selector */}
         <SegmentedControl
           options={[
             { value: "month", label: "Month" },
@@ -178,13 +177,20 @@ export default function FinanceScreen() {
           onChange={(v) => setPeriod(v as Period)}
         />
 
+        {/* Unit Filter Chips */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
           <UnitChip label="All units" active={unitId === "all"} onPress={() => setUnitId("all")} />
           {units.map((u) => (
-            <UnitChip key={u.id} label={u.name} active={unitId === u.id} onPress={() => setUnitId(u.id)} />
+            <UnitChip
+              key={u.id}
+              label={u.name}
+              active={unitId === u.id}
+              onPress={() => setUnitId(u.id)}
+            />
           ))}
         </ScrollView>
 
+        {/* Export Button */}
         <Button
           label={unitId === "all" ? "Export Portfolio PDF" : `Export ${units.find((u) => u.id === unitId)?.name ?? "Unit"} PDF`}
           variant="secondary"
@@ -199,19 +205,25 @@ export default function FinanceScreen() {
           <Text style={[styles.statValue, { color: result.net >= 0 ? c.foreground : c.destructive }]}>
             {formatMoney(result.net, settings.currency)}
           </Text>
+
           <View style={[styles.divider, { borderColor: c.border, marginVertical: 14 }]} />
+
           <View style={{ gap: 10 }}>
             <Row label="Gross income" value={formatMoney(result.gross, settings.currency)} />
-            <Row label="Expenses" value={`- ${formatMoney(result.expenses, settings.currency)}`} valueColor={c.destructive} />
+            <Row
+              label="Expenses"
+              value={`- ${formatMoney(result.expenses, settings.currency)}`}
+              valueColor={c.destructive}
+            />
           </View>
         </Card>
 
-        {/* Profit Distribution Card */}
+        {/* Profit Distribution */}
         <Card>
           <View style={styles.rowBetween}>
             <View>
-              <Text style={{ color: c.foreground, fontFamily: "Inter_700Bold", fontSize: 16 }}>Profit distribution</Text>
-              <Text style={{ color: c.mutedForeground, fontFamily: "Inter_400Regular", fontSize: 12 }}>
+              <Text style={styles.sectionTitle}>Profit distribution</Text>
+              <Text style={styles.subText}>
                 {settings.investorSharePct}% investor · {settings.operatorSharePct}% operator
               </Text>
             </View>
@@ -219,18 +231,20 @@ export default function FinanceScreen() {
               <Feather name="sliders" size={18} color={c.primary} />
             </Pressable>
           </View>
+
           <View style={{ marginTop: 16 }}>
             <SplitBar investorPct={settings.investorSharePct} operatorPct={settings.operatorSharePct} />
           </View>
+
           <View style={[styles.splitRow, { marginTop: 18 }]}>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.splitLabel, { color: c.mutedForeground }]}>Investor ({settings.investorSharePct}%)</Text>
-              <Text style={{ color: c.primary, fontFamily: "Inter_700Bold", fontSize: 22 }}>{formatMoney(result.investorShare, settings.currency)}</Text>
+              <Text style={styles.splitLabel}>Investor ({settings.investorSharePct}%)</Text>
+              <Text style={styles.splitValue}>{formatMoney(result.investorShare, settings.currency)}</Text>
             </View>
             <View style={[styles.divider, { borderColor: c.border, height: 40, borderRightWidth: StyleSheet.hairlineWidth }]} />
             <View style={{ flex: 1, alignItems: "flex-end" }}>
-              <Text style={[styles.splitLabel, { color: c.mutedForeground }]}>Operator ({settings.operatorSharePct}%)</Text>
-              <Text style={{ color: c.foreground, fontFamily: "Inter_700Bold", fontSize: 22 }}>{formatMoney(result.operatorShare, settings.currency)}</Text>
+              <Text style={styles.splitLabel}>Operator ({settings.operatorSharePct}%)</Text>
+              <Text style={styles.splitValue}>{formatMoney(result.operatorShare, settings.currency)}</Text>
             </View>
           </View>
         </Card>
@@ -238,7 +252,7 @@ export default function FinanceScreen() {
         {/* Recent Expenses */}
         <View>
           <View style={[styles.rowBetween, { marginBottom: 10 }]}>
-            <Text style={{ color: c.foreground, fontFamily: "Inter_700Bold", fontSize: 16 }}>Recent expenses</Text>
+            <Text style={styles.sectionTitle}>Recent expenses</Text>
             <Button
               label="Add"
               size="sm"
@@ -250,28 +264,34 @@ export default function FinanceScreen() {
 
           <Card style={{ padding: 0, overflow: "hidden" }}>
             {recentExpenses.length === 0 ? (
-              <EmptyState icon="dollar-sign" title="No expenses yet" description="Track repairs and bills here." />
+              <EmptyState
+                icon="dollar-sign"
+                title="No expenses yet"
+                description="Track repairs and bills here."
+              />
             ) : (
               recentExpenses.map((e, idx) => (
                 <ReanimatedSwipeable
                   key={e.id}
                   friction={2}
-                  rightThreshold={50}
-                  renderRightActions={(prog, drag, sw) => renderRightActions(prog, drag, sw, e.id)}
+                  rightThreshold={60}
+                  renderRightActions={(prog, drag, sw) =>
+                    renderRightActions(prog, drag, sw, e.id)
+                  }
                 >
                   <Pressable
                     onPress={() => router.push(`/expense/${e.id}`)}
                     style={({ pressed }) => [
                       styles.expenseRow,
-                      { 
+                      {
                         backgroundColor: pressed ? c.accent : c.card,
+                        borderTopWidth: idx === 0 ? 0 : StyleSheet.hairlineWidth,
                         borderTopColor: c.border,
-                        borderTopWidth: idx === 0 ? 0 : StyleSheet.hairlineWidth 
-                      }
+                      },
                     ]}
                   >
-                    <View style={[styles.expenseIcon, { backgroundColor: c.accent }]}>
-                      <Feather name="tag" size={14} color={c.primary} />
+                    <View style={styles.expenseIcon}>
+                      <Feather name="tag" size={16} color={c.primary} />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.expenseDesc}>{e.description || e.category}</Text>
@@ -294,6 +314,7 @@ export default function FinanceScreen() {
 }
 
 /* ====================== Helper Components ====================== */
+
 function Row({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
   const c = useColors();
   return (
@@ -318,15 +339,23 @@ function UnitChip({ label, active, onPress }: { label: string; active: boolean; 
   const c = useColors();
   return (
     <Pressable onPress={onPress}>
-      <View style={{
-        paddingVertical: 8,
-        paddingHorizontal: 14,
-        borderRadius: 999,
-        backgroundColor: active ? c.primary : c.muted,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: active ? c.primary : c.border
-      }}>
-        <Text style={{ color: active ? c.primaryForeground : c.foreground, fontWeight: "600", fontSize: 12 }}>
+      <View
+        style={{
+          paddingVertical: 8,
+          paddingHorizontal: 14,
+          borderRadius: 999,
+          backgroundColor: active ? c.primary : c.muted,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: active ? c.primary : c.border,
+        }}
+      >
+        <Text
+          style={{
+            color: active ? c.primaryForeground : c.foreground,
+            fontWeight: "600",
+            fontSize: 12,
+          }}
+        >
           {label}
         </Text>
       </View>
@@ -335,34 +364,38 @@ function UnitChip({ label, active, onPress }: { label: string; active: boolean; 
 }
 
 const styles = StyleSheet.create({
-  divider: { borderTopWidth: StyleSheet.hairlineWidth },
   rowBetween: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  sectionTitle: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#1f2937" },
+  subText: { fontFamily: "Inter_400Regular", fontSize: 12, color: "#6b7280" },
   splitRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  splitLabel: { fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, color: "#6b7280" },
+  splitValue: { fontFamily: "Inter_700Bold", fontSize: 22 },
   statLabel: { fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5 },
   statValue: { fontSize: 32, marginTop: 6, fontWeight: "700" },
-  splitLabel: { fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5 },
-  expenseRow: { 
-    flexDirection: "row", 
-    alignItems: "center", 
-    paddingHorizontal: 16, 
-    paddingVertical: 14, 
-    gap: 12 
+  expenseRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 12,
   },
-  expenseIcon: { 
-    width: 32, 
-    height: 32, 
-    alignItems: "center", 
+  expenseIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: "#f3f4f6",
+    alignItems: "center",
     justifyContent: "center",
-    borderRadius: 8 
   },
-  expenseDesc: { fontWeight: "600", fontSize: 14 },
-  expenseMeta: { color: "#6b7280", fontSize: 11, marginTop: 2 },
-  expenseAmount: { color: "#ef4444", fontWeight: "700", fontSize: 15 },
-  actionsContainer: { flexDirection: "row", width: 160, height: "100%" },
-  actionButton: { 
-    width: 80, 
-    height: "100%", 
-    justifyContent: "center", 
-    alignItems: "center" 
+  expenseDesc: { fontWeight: "600", fontSize: 14.5 },
+  expenseMeta: { color: "#6b7280", fontSize: 11.5, marginTop: 2 },
+  expenseAmount: { color: "#ef4444", fontWeight: "700", fontSize: 15.5 },
+  actionsContainer: { flexDirection: "row", width: 100, height: "100%" },
+  actionButton: {
+    width: 100,
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
   },
+  divider: { borderTopWidth: StyleSheet.hairlineWidth },
 });
