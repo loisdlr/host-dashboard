@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Modal, StyleSheet, Pressable, ScrollView, Alert } from 'react-native';
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  Modal, 
+  StyleSheet, 
+  Pressable, 
+  ScrollView, 
+  Alert 
+} from 'react-native';
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -21,41 +30,27 @@ export default function CleanersScreen() {
 
   const handleAdd = () => {
     if (!newName.trim()) return;
-    addCleaner({ 
-        name: newName.trim(), 
-        phone: "", 
-        ratePerClean: 450 
-    });
+    addCleaner({ name: newName.trim(), phone: "", ratePerClean: 450 });
     setNewName("");
     setAddVisible(false);
   };
 
   const handleUpdate = () => {
-    if (selectedCleaner && selectedCleaner.id) {
-      // Logic fix: id first, then the patch object
+    if (selectedCleaner?.id) {
       updateCleaner(selectedCleaner.id, { name: selectedCleaner.name.trim() });
       setEditVisible(false);
       setSelectedCleaner(null);
     }
   };
 
-  // --- THE DELETE FIX ---
-  const handleConfirmDelete = (id: string, name: string) => {
-    console.log("Attempting to delete ID:", id); // Check your terminal for this!
-    
+  const confirmDelete = (id: string, name: string) => {
+    // If you see this Alert, the button is clickable.
     Alert.alert(
-      "Remove Staff",
-      `Are you sure you want to delete ${name}?`,
+      "Confirm Delete",
+      `Delete ${name}?`,
       [
         { text: "Cancel", style: "cancel" },
-        { 
-          text: "Delete", 
-          style: "destructive", 
-          onPress: () => {
-            if (!id) return console.error("No ID found for this cleaner!");
-            deleteCleaner(id); 
-          } 
-        }
+        { text: "Delete", style: "destructive", onPress: () => deleteCleaner(id) }
       ]
     );
   };
@@ -64,24 +59,38 @@ export default function CleanersScreen() {
     <View style={{ flex: 1, backgroundColor: c.background }}>
       <ScreenHeader 
         title="Cleaners" 
-        rightIcon="plus"
-        onRightPress={() => setAddVisible(true)}
+        rightIcon="plus" 
+        onRightPress={() => setAddVisible(true)} 
       />
       
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 20, gap: 12 }}>
+      <ScrollView 
+        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 20, gap: 12 }}
+        // This ensures the ScrollView doesn't block children taps
+        tapAnywhereToDismiss={false} 
+      >
         {cleaners.map((item) => (
           <Card key={item.id} style={styles.card}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontWeight: '600', color: c.foreground }}>{item.name}</Text>
-              <Text style={{ fontSize: 10, color: c.mutedForeground }}>ID: {item.id.slice(0, 5)}</Text>
+            <View style={{ flex: 1, justifyContent: 'center' }}>
+              <Text style={{ fontWeight: '600', color: c.foreground, fontSize: 16 }}>
+                {item.name}
+              </Text>
             </View>
             
-            <View style={{ flexDirection: 'row', gap: 20 }}>
-              <Pressable onPress={() => { setSelectedCleaner({...item}); setEditVisible(true); }}>
+            {/* ACTION BUTTONS CONTAINER */}
+            <View style={styles.actions}>
+              <Pressable 
+                onPress={() => { setSelectedCleaner({...item}); setEditVisible(true); }}
+                style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.5 : 1 }]}
+                hitSlop={15} // Makes it easier to tap
+              >
                 <Feather name="edit-2" size={20} color={c.primary} />
               </Pressable>
               
-              <Pressable onPress={() => handleConfirmDelete(item.id, item.name)}>
+              <Pressable 
+                onPress={() => confirmDelete(item.id, item.name)}
+                style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.5 : 1 }]}
+                hitSlop={15}
+              >
                 <Feather name="trash-2" size={20} color={c.destructive} />
               </Pressable>
             </View>
@@ -89,7 +98,7 @@ export default function CleanersScreen() {
         ))}
       </ScrollView>
 
-      {/* ADD MODAL */}
+      {/* ADD & EDIT MODALS STAY THE SAME AS PREVIOUS CODE */}
       <Modal visible={isAddVisible} animationType="slide">
         <View style={{ flex: 1, backgroundColor: c.background, paddingTop: 50 }}>
           <ScreenHeader title="New Staff" leftIcon="x" onLeftPress={() => setAddVisible(false)} />
@@ -97,16 +106,14 @@ export default function CleanersScreen() {
             <TextInput 
               style={[styles.input, { borderColor: c.border, color: c.foreground }]}
               placeholder="Name"
-              placeholderTextColor="#999"
               value={newName}
               onChangeText={setNewName}
             />
-            <Button label="Save Staff" onPress={handleAdd} />
+            <Button label="Save" onPress={handleAdd} />
           </View>
         </View>
       </Modal>
 
-      {/* EDIT MODAL */}
       <Modal visible={isEditVisible} animationType="slide">
         <View style={{ flex: 1, backgroundColor: c.background, paddingTop: 50 }}>
           <ScreenHeader title="Edit Staff" leftIcon="x" onLeftPress={() => setEditVisible(false)} />
@@ -116,7 +123,7 @@ export default function CleanersScreen() {
               value={selectedCleaner?.name}
               onChangeText={(t) => setSelectedCleaner({...selectedCleaner, name: t})}
             />
-            <Button label="Update Changes" onPress={handleUpdate} />
+            <Button label="Update" onPress={handleUpdate} />
           </View>
         </View>
       </Modal>
@@ -125,7 +132,21 @@ export default function CleanersScreen() {
 }
 
 const styles = StyleSheet.create({
-  card: { flexDirection: 'row', padding: 18, alignItems: 'center' },
+  card: { 
+    flexDirection: 'row', 
+    padding: 16, 
+    alignItems: 'center',
+    minHeight: 70, // Ensures a consistent height for tapping
+  },
+  actions: { 
+    flexDirection: 'row', 
+    gap: 20, 
+    alignItems: 'center',
+    zIndex: 99, // Brings buttons to the front
+  },
+  iconBtn: { 
+    padding: 10, // Larger tap target
+  },
   form: { padding: 20, gap: 15 },
   input: { borderWidth: 1, padding: 14, borderRadius: 10, fontSize: 16 }
 });
