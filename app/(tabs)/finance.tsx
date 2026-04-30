@@ -22,18 +22,8 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 import { SegmentedControl } from "@/components/SegmentedControl";
 import { useColors } from "@/hooks/useColors";
 import { useRental } from "@/contexts/RentalContext";
-import {
-  formatLong,
-  parseISODate,
-  todayISO,
-  toISODate,
-  formatShort,
-} from "@/utils/date";
-import {
-  formatMoney,
-  splitForAll,
-  splitForUnit,
-} from "@/utils/finance";
+import { formatLong, parseISODate, todayISO, toISODate, formatShort } from "@/utils/date";
+import { formatMoney, splitForAll, splitForUnit } from "@/utils/finance";
 import type { Expense } from "@/types";
 
 type Period = "month" | "ytd" | "all";
@@ -67,98 +57,55 @@ export default function FinanceScreen() {
     return splitForUnit(unitId, bookings, expenses, settings, range);
   }, [unitId, bookings, expenses, settings, range]);
 
-  // Filter Bookings (Income) for PDF
-  const filteredBookings = useMemo(() => {
-    let list = [...bookings];
-    if (unitId !== "all") list = list.filter((b) => b.unitId === unitId);
-    if (range) list = list.filter((b) => b.checkIn >= range.start && b.checkIn <= range.end);
-    return list.sort((a, b) => b.checkIn.localeCompare(a.checkIn));
-  }, [bookings, unitId, range]);
-
-  // Filter Expenses for the List and PDF
-  const filteredExpenses = useMemo(() => {
-    let list = [...expenses];
-    if (unitId !== "all") list = list.filter((e) => e.unitId === unitId || e.unitId === "all");
-    if (range) list = list.filter((e) => e.date >= range.start && e.date <= range.end);
-    return list.sort((a, b) => b.date.localeCompare(a.date));
-  }, [expenses, unitId, range]);
-
   const periodLabel = period === "month" ? "This month" : period === "ytd" ? "Year to date" : "All time";
 
-  // ==================== ENHANCED PDF GENERATION ====================
-  const generateAndExportPDF = async () => {
+  // ==================== PDF EXPORT LOGIC ====================
+  
+  const onExportPdf = async () => {
     try {
-      const unitName = unitId === "all" ? "Portfolio" : units.find(u => u.id === unitId)?.name || "Unit";
-      const currency = settings.currency;
+      const targetUnits = unitId === "all" ? units : units.filter((u) => u.id === unitId);
+      
+      if (targetUnits.length === 0) {
+        Alert.alert("No unit selected");
+        return;
+      }
 
-      const html = `
-        <html>
-          <head>
-            <style>
-              body { font-family: Helvetica, Arial, sans-serif; padding: 40px; color: #333; }
-              h1 { text-align: center; margin-bottom: 5px; }
-              .period { text-align: center; color: #666; margin-bottom: 30px; }
-              .summary-box { background: #f8fafc; border-radius: 8px; padding: 20px; margin-bottom: 30px; border: 1px solid #e2e8f0; }
-              .summary-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 16px; }
-              .total { font-size: 20px; font-weight: bold; border-top: 2px solid #e2e8f0; padding-top: 10px; margin-top: 10px; }
-              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-              th { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 12px; text-align: left; }
-              td { border: 1px solid #e2e8f0; padding: 10px; }
-              .income { color: #10b981; }
-              .expense { color: #ef4444; }
-              h3 { margin-top: 40px; border-bottom: 2px solid #333; padding-bottom: 5px; }
-            </style>
-          </head>
-          <body>
-            <h1>${unitName} Financial Report</h1>
-            <p class="period">${periodLabel} (${range ? `${formatShort(range.start)} - ${formatShort(range.end)}` : 'All Time'})</p>
-            
-            <div class="summary-box">
-              <div class="summary-row"><span>Gross Income:</span><span>${formatMoney(result.gross, currency)}</span></div>
-              <div class="summary-row"><span>Total Expenses:</span><span class="expense">-${formatMoney(result.expenses, currency)}</span></div>
-              <div class="summary-row total"><span>Net Profit:</span><span>${formatMoney(result.net, currency)}</span></div>
-              <div class="summary-row" style="margin-top:20px;"><span>Investor Share (${settings.investorSharePct}%):</span><span>${formatMoney(result.investorShare, currency)}</span></div>
-              <div class="summary-row"><span>Operator Share (${settings.operatorSharePct}%):</span><span>${formatMoney(result.operatorShare, currency)}</span></div>
-            </div>
-
-            <h3>Income (Bookings)</h3>
-            <table>
-              <tr><th>Date</th><th>Guest / Unit</th><th>Amount</th></tr>
-              ${filteredBookings.map(b => `
-                <tr>
-                  <td>${formatShort(b.checkIn)}</td>
-                  <td>${b.guestName} (${units.find(u => u.id === b.unitId)?.name || 'Unit'})</td>
-                  <td class="income">${formatMoney(b.totalPrice, currency)}</td>
-                </tr>
-              `).join('')}
-            </table>
-
-            <h3>Expenses</h3>
-            <table>
-              <tr><th>Date</th><th>Description</th><th>Amount</th></tr>
-              ${filteredExpenses.map(e => `
-                <tr>
-                  <td>${formatShort(e.date)}</td>
-                  <td>${e.description || e.category}</td>
-                  <td class="expense">-${formatMoney(e.amount, currency)}</td>
-                </tr>
-              `).join('')}
-            </table>
-          </body>
-        </html>
-      `;
+      const html = unitId === "all" 
+        ? buildPortfolioPdf(units, bookings, expenses, settings, range, periodLabel)
+        : buildSingleUnitPdf(targetUnits[0]!, bookings, expenses, settings, range, periodLabel);
 
       const { uri } = await Print.printToFileAsync({ html });
-      await Sharing.shareAsync(uri);
-    } catch (error: any) {
-      Alert.alert("Export Failed", error.message);
+      await Sharing.shareAsync(uri, { UTI: ".pdf", mimeType: "application/pdf" });
+      
+    } catch (e) {
+      Alert.alert("Export failed", e instanceof Error ? e.message : "Could not export PDF.");
     }
   };
 
-  const handleDelete = (id: string) => {
-    Alert.alert("Delete", "Delete this expense?", [
+  // ==================== NAVIGATION & ACTIONS ====================
+
+  const handleEditNavigate = () => {
+    const id = selectedExpense?.id;
+    setSelectedExpense(null); // Close modal first to prevent crash
+    if (id) {
+      router.push(`/expense/${id}`);
+    }
+  };
+
+  const handleDelete = () => {
+    const id = selectedExpense?.id;
+    if (!id) return;
+
+    Alert.alert("Confirm Delete", "Are you sure you want to remove this expense?", [
       { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => { deleteExpense(id); setSelectedExpense(null); } }
+      { 
+        text: "Delete", 
+        style: "destructive", 
+        onPress: () => {
+          deleteExpense(id);
+          setSelectedExpense(null);
+        } 
+      }
     ]);
   };
 
@@ -166,12 +113,7 @@ export default function FinanceScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
-      <ScreenHeader
-        title="Finance"
-        subtitle={periodLabel}
-        rightIcon="settings"
-        onRightPress={() => router.push("/settings")}
-      />
+      <ScreenHeader title="Finance" subtitle={periodLabel} rightIcon="settings" onRightPress={() => router.push("/settings")} />
 
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 110, gap: 16 }}>
         <SegmentedControl
@@ -187,81 +129,114 @@ export default function FinanceScreen() {
           ))}
         </ScrollView>
 
-        <Button
-          label="Generate Financial PDF"
-          variant="secondary"
-          icon={<Feather name="file-text" size={18} color={c.foreground} />}
-          onPress={generateAndExportPDF}
-          fullWidth
-        />
+        <Button label="Generate Financial PDF" variant="secondary" icon={<Feather name="file-text" size={18} color={c.foreground} />} onPress={onExportPdf} fullWidth />
 
         <Card>
-          <Text style={{ fontSize: 13, color: c.mutedForeground, marginBottom: 4 }}>Net Profit</Text>
+          <Text style={{ fontSize: 13, color: c.mutedForeground }}>Net Profit</Text>
           <Text style={{ fontSize: 32, fontWeight: "800", color: result.net >= 0 ? c.foreground : c.destructive }}>
             {formatMoney(result.net, settings.currency)}
           </Text>
-          <SplitBar 
-            investor={result.investorShare} 
-            operator={result.operatorShare} 
-            investorPct={settings.investorSharePct}
-            operatorPct={settings.operatorSharePct}
-            currency={settings.currency}
-          />
+          <SplitBar investor={result.investorShare} operator={result.operatorShare} investorPct={settings.investorSharePct} operatorPct={settings.operatorSharePct} currency={settings.currency} />
         </Card>
 
+        {/* Expense List */}
         <View>
-          <View style={[styles.rowBetween, { marginBottom: 12 }]}>
-            <Text style={styles.sectionTitle}>Recent expenses</Text>
-            <Button
-              label="Add" size="sm" variant="secondary"
-              icon={<Feather name="plus" size={14} color={c.foreground} />}
-              onPress={() => router.push("/expense/new")}
-            />
-          </View>
-
-          <Card style={{ padding: 0, overflow: "hidden" }}>
-            {filteredExpenses.length === 0 ? (
-              <EmptyState icon="dollar-sign" title="No expenses" description="No data for this period." />
-            ) : (
-              filteredExpenses.slice(0, 8).map((e, idx) => (
-                <View key={e.id} style={[styles.expenseRow, idx !== 0 && { borderTopWidth: 1, borderTopColor: c.border }]}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.expenseDesc}>{e.description || e.category}</Text>
-                    <Text style={styles.expenseMeta}>{formatLong(e.date)} · {e.category}</Text>
-                  </View>
-                  <Text style={styles.expenseAmount}>-{formatMoney(e.amount, settings.currency)}</Text>
-                  <TouchableOpacity onPress={() => setSelectedExpense(e)} style={{ paddingLeft: 10 }}>
-                    <Feather name="edit-2" size={16} color={c.primary} />
-                  </TouchableOpacity>
+          <Text style={styles.sectionTitle}>Recent expenses</Text>
+          <Card style={{ padding: 0, overflow: "hidden", marginTop: 12 }}>
+            {expenses.filter(e => unitId === 'all' || e.unitId === unitId).slice(0, 10).map((e, idx) => (
+              <Pressable key={e.id} onPress={() => setSelectedExpense(e)} style={[styles.expenseRow, idx !== 0 && { borderTopWidth: 1, borderTopColor: c.border }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.expenseDesc}>{e.description || e.category}</Text>
+                  <Text style={styles.expenseMeta}>{formatShort(e.date)} · {e.category}</Text>
                 </View>
-              ))
-            )}
+                <Text style={styles.expenseAmount}>-{formatMoney(e.amount, settings.currency)}</Text>
+                <Feather name="more-vertical" size={16} color={c.mutedForeground} style={{ marginLeft: 8 }} />
+              </Pressable>
+            ))}
           </Card>
         </View>
       </ScrollView>
 
-      <Modal visible={!!selectedExpense} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
+      {/* Action Modal */}
+      <Modal visible={!!selectedExpense} transparent animationType="fade" onRequestClose={() => setSelectedExpense(null)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setSelectedExpense(null)}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Options</Text>
-            <Button label="Edit" onPress={() => { router.push(`/expense/${selectedExpense?.id}`); setSelectedExpense(null); }} fullWidth />
-            <View style={{ height: 10 }} />
-            <Button label="Delete" variant="destructive" onPress={() => selectedExpense && handleDelete(selectedExpense.id)} fullWidth />
-            <TouchableOpacity onPress={() => setSelectedExpense(null)} style={{ marginTop: 20 }}><Text>Cancel</Text></TouchableOpacity>
+            <Text style={styles.modalTitle}>Expense Options</Text>
+            <TouchableOpacity style={styles.modalButton} onPress={handleEditNavigate}>
+              <Feather name="edit-2" size={18} color={c.primary} />
+              <Text style={styles.modalButtonText}>Edit Details</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.modalButton, { backgroundColor: '#fff5f5' }]} onPress={handleDelete}>
+              <Feather name="trash-2" size={18} color="#ef4444" />
+              <Text style={[styles.modalButtonText, { color: '#ef4444' }]}>Delete Expense</Text>
+            </TouchableOpacity>
           </View>
-        </View>
+        </Pressable>
       </Modal>
     </View>
   );
 }
 
-// ==================== SUB-COMPONENTS ====================
+// ==================== PDF BUILDERS ====================
 
-function UnitChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+function buildPortfolioPdf(units: any[], bookings: any[], expenses: any[], settings: any, range: any, label: string) {
+  const result = splitForAll(bookings, expenses, settings, range);
+  return `
+    <html>
+      <body style="font-family: sans-serif; padding: 40px;">
+        <h1 style="text-align:center;">CozyManhattan Portfolio Statement</h1>
+        <p style="text-align:center;">${label}</p>
+        <div style="background: #f4f4f4; padding: 20px; border-radius: 10px; margin: 20px 0;">
+          <h2>Net Profit: ${formatMoney(result.net, settings.currency)}</h2>
+          <p>Investor Share: ${formatMoney(result.investorShare, settings.currency)}</p>
+          <p>Operator Share: ${formatMoney(result.operatorShare, settings.currency)}</p>
+        </div>
+        <h3>Combined Activity</h3>
+        <table style="width:100%; border-collapse: collapse;">
+          <tr style="background:#eee;">
+            <th style="border:1px solid #ddd; padding:8px;">Date</th>
+            <th style="border:1px solid #ddd; padding:8px;">Unit</th>
+            <th style="border:1px solid #ddd; padding:8px;">Description</th>
+            <th style="border:1px solid #ddd; padding:8px;">Amount</th>
+          </tr>
+          ${expenses.filter(e => !range || (e.date >= range.start && e.date <= range.end)).map(e => `
+            <tr>
+              <td style="border:1px solid #ddd; padding:8px;">${formatShort(e.date)}</td>
+              <td style="border:1px solid #ddd; padding:8px;">${units.find(u => u.id === e.unitId)?.name || 'Portfolio'}</td>
+              <td style="border:1px solid #ddd; padding:8px;">${e.description || e.category}</td>
+              <td style="border:1px solid #ddd; padding:8px; color:red;">-${formatMoney(e.amount, settings.currency)}</td>
+            </tr>
+          `).join('')}
+        </table>
+      </body>
+    </html>
+  `;
+}
+
+function buildSingleUnitPdf(unit: any, bookings: any[], expenses: any[], settings: any, range: any, label: string) {
+  const result = splitForUnit(unit.id, bookings, expenses, settings, range);
+  return `
+    <html>
+      <body style="font-family: sans-serif; padding: 40px;">
+        <h1 style="text-align:center;">${unit.name} Statement</h1>
+        <p style="text-align:center;">${label}</p>
+        <div style="background: #eef2ff; padding: 20px; border-radius: 10px;">
+          <h2>Net Profit: ${formatMoney(result.net, settings.currency)}</h2>
+          <p>Investor: ${formatMoney(result.investorShare, settings.currency)}</p>
+          <p>Operator: ${formatMoney(result.operatorShare, settings.currency)}</p>
+        </div>
+      </body>
+    </html>
+  `;
+}
+
+// ==================== STYLES & UI ====================
+
+function UnitChip({ label, active, onPress }: any) {
   const c = useColors();
   return (
     <Pressable onPress={onPress} style={[styles.chip, { backgroundColor: active ? c.primary : c.muted }]}>
-      <Text style={{ color: active ? "white" : c.foreground, fontWeight: "600", fontSize: 13 }}>{label}</Text>
+      <Text style={{ color: active ? "white" : c.foreground, fontWeight: "600" }}>{label}</Text>
     </Pressable>
   );
 }
@@ -269,28 +244,29 @@ function UnitChip({ label, active, onPress }: { label: string; active: boolean; 
 function SplitBar({ investor, operator, investorPct, operatorPct, currency }: any) {
   const c = useColors();
   return (
-    <View style={{ marginTop: 20 }}>
-      <View style={{ flexDirection: 'row', height: 8, borderRadius: 4, overflow: 'hidden', backgroundColor: '#eee' }}>
-        <View style={{ flex: investorPct, backgroundColor: c.primary }} />
-        <View style={{ flex: operatorPct, backgroundColor: '#94a3b8' }} />
+    <View style={{ marginTop: 16 }}>
+      <View style={{ flexDirection: 'row', height: 6, borderRadius: 3, overflow: 'hidden', backgroundColor: '#eee' }}>
+        <View style={{ width: `${investorPct}%`, backgroundColor: c.primary }} />
+        <View style={{ width: `${operatorPct}%`, backgroundColor: '#94a3b8' }} />
       </View>
-      <View style={[styles.rowBetween, { marginTop: 8 }]}>
-        <Text style={{ fontSize: 12, color: c.mutedForeground }}>Investor: {formatMoney(investor, currency)}</Text>
-        <Text style={{ fontSize: 12, color: c.mutedForeground }}>Operator: {formatMoney(operator, currency)}</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
+        <Text style={{ fontSize: 12, color: c.mutedForeground }}>Inv: ${investor.toFixed(0)}</Text>
+        <Text style={{ fontSize: 12, color: c.mutedForeground }}>Op: ${operator.toFixed(0)}</Text>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  rowBetween: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   sectionTitle: { fontSize: 16, fontWeight: "700" },
   expenseRow: { flexDirection: "row", alignItems: "center", padding: 16 },
   expenseDesc: { fontWeight: "600", fontSize: 14 },
   expenseMeta: { color: "#6b7280", fontSize: 11, marginTop: 2 },
-  expenseAmount: { color: "#ef4444", fontWeight: "700", fontSize: 14 },
+  expenseAmount: { color: "#ef4444", fontWeight: "700" },
   chip: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20 },
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: 20 },
-  modalContent: { backgroundColor: "white", borderRadius: 16, padding: 20, alignItems: "center" },
-  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 20 },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
+  modalContent: { backgroundColor: "white", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 40 },
+  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 20, textAlign: 'center' },
+  modalButton: { flexDirection: "row", alignItems: "center", gap: 12, padding: 16, borderRadius: 12, marginBottom: 12, backgroundColor: "#f8f9fa" },
+  modalButtonText: { fontSize: 16, fontWeight: "600" },
 });
