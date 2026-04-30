@@ -8,6 +8,7 @@ import {
   Pressable,
   ScrollView,
   Alert,
+  SafeAreaView,
 } from 'react-native';
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -25,7 +26,6 @@ export default function CleanersScreen() {
   const [selectedCleaner, setSelectedCleaner] = useState<any>(null);
   const [newName, setNewName] = useState("");
 
-  // Handle Update
   const handleUpdate = () => {
     if (selectedCleaner?.id && selectedCleaner.name?.trim()) {
       updateCleaner(selectedCleaner.id, { name: selectedCleaner.name.trim() });
@@ -34,17 +34,16 @@ export default function CleanersScreen() {
     }
   };
 
-  // Handle Delete with confirmation
   const handleDelete = () => {
     if (!selectedCleaner?.id) return;
 
     Alert.alert(
       "Confirm Delete",
-      `Are you sure you want to remove "${selectedCleaner.name}"?\n\nThis action cannot be undone.`,
+      `Are you sure you want to remove "${selectedCleaner.name}"?`,
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Delete Staff",
+          text: "Delete",
           style: "destructive",
           onPress: () => {
             deleteCleaner(selectedCleaner.id);
@@ -56,14 +55,12 @@ export default function CleanersScreen() {
     );
   };
 
-  // Open Edit Modal
   const openEdit = (cleaner: any) => {
     setSelectedCleaner({ ...cleaner });
     setEditVisible(true);
   };
 
-  // Add New Cleaner
-  const handleAddCleaner = () => {
+  const handleAdd = () => {
     if (newName.trim()) {
       addCleaner({ name: newName.trim() });
       setAddVisible(false);
@@ -86,9 +83,7 @@ export default function CleanersScreen() {
         }}
       >
         {cleaners.length === 0 ? (
-          <Text style={styles.emptyText}>
-            No staff members yet
-          </Text>
+          <Text style={styles.emptyText}>No staff members yet</Text>
         ) : (
           cleaners.map((item) => (
             <Pressable
@@ -97,70 +92,64 @@ export default function CleanersScreen() {
               style={styles.itemRow}
             >
               <View style={{ flex: 1 }}>
-                <Text style={styles.cleanerName}>{item.name}</Text>
-                <Text style={styles.cleanerId}>
+                <Text style={styles.name}>{item.name}</Text>
+                <Text style={styles.idText}>
                   ID: {item.id ? String(item.id).slice(0, 8) : 'MISSING'}
                 </Text>
               </View>
-              <Feather name="edit-2" size={18} color={c.primary} />
+              <Feather name="edit-2" size={20} color={c.primary} />
             </Pressable>
           ))
         )}
       </ScrollView>
 
-      {/* EDIT MODAL */}
+      {/* ==================== EDIT MODAL ==================== */}
       <Modal visible={isEditVisible} animationType="slide" transparent={false}>
-        <View style={styles.modalContainer}>
+        <SafeAreaView style={styles.modalContainer}>
           <Text style={styles.modalTitle}>Edit Staff</Text>
 
           <TextInput
             style={[styles.input, { borderColor: c.border, color: c.foreground }]}
             value={selectedCleaner?.name || ''}
-            onChangeText={(text) =>
-              setSelectedCleaner((prev: any) => (prev ? { ...prev, name: text } : null))
+            onChangeText={(t) =>
+              setSelectedCleaner((prev: any) => (prev ? { ...prev, name: t } : null))
             }
             placeholder="Staff name"
             autoFocus
           />
 
-          <View style={styles.buttonRow}>
-            <Pressable
-              onPress={() => {
-                setEditVisible(false);
-                setSelectedCleaner(null);
-              }}
-              style={styles.cancelBtn}
-            >
-              <Text style={styles.cancelBtnText}>Cancel</Text>
+          <View style={styles.actionButtons}>
+            <Pressable onPress={() => { setEditVisible(false); setSelectedCleaner(null); }} style={styles.cancelBtn}>
+              <Text style={styles.cancelText}>Cancel</Text>
             </Pressable>
 
             <Pressable onPress={handleUpdate} style={styles.saveBtn}>
-              <Text style={styles.saveBtnText}>Update</Text>
+              <Text style={styles.saveText}>Update</Text>
             </Pressable>
           </View>
 
-          {/* Delete Button - Fixed with proper flex layout */}
+          {/* Delete Button - Now clearly separated and reliable */}
           <Pressable onPress={handleDelete} style={styles.deleteBtn}>
             <Feather name="trash-2" size={20} color="#ef4444" />
-            <Text style={styles.deleteBtnText}>Remove Staff Member</Text>
+            <Text style={styles.deleteText}>Remove Staff Member</Text>
           </Pressable>
-        </View>
+        </SafeAreaView>
       </Modal>
 
-      {/* ADD MODAL */}
+      {/* ==================== ADD MODAL ==================== */}
       <Modal visible={isAddVisible} animationType="slide" transparent={false}>
-        <View style={styles.modalContainer}>
+        <SafeAreaView style={styles.modalContainer}>
           <Text style={styles.modalTitle}>New Staff Member</Text>
 
           <TextInput
             style={[styles.input, { borderColor: c.border, color: c.foreground }]}
             value={newName}
             onChangeText={setNewName}
-            placeholder="Enter staff name..."
+            placeholder="Enter name..."
             autoFocus
           />
 
-          <View style={styles.buttonRow}>
+          <View style={styles.actionButtons}>
             <Pressable
               onPress={() => {
                 setAddVisible(false);
@@ -168,14 +157,14 @@ export default function CleanersScreen() {
               }}
               style={styles.cancelBtn}
             >
-              <Text style={styles.cancelBtnText}>Cancel</Text>
+              <Text style={styles.cancelText}>Cancel</Text>
             </Pressable>
 
-            <Pressable onPress={handleAddCleaner} style={styles.saveBtn}>
-              <Text style={styles.saveBtnText}>Save</Text>
+            <Pressable onPress={handleAdd} style={styles.saveBtn}>
+              <Text style={styles.saveText}>Save</Text>
             </Pressable>
           </View>
-        </View>
+        </SafeAreaView>
       </Modal>
     </View>
   );
@@ -187,49 +176,48 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#eeeeee',
+    borderBottomColor: '#eee',
   },
-  cleanerName: {
+  name: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1f2937',
   },
-  cleanerId: {
+  idText: {
     fontSize: 10,
     color: '#9ca3af',
     marginTop: 2,
   },
   emptyText: {
     textAlign: 'center',
-    color: '#9ca3af',
+    color: '#999',
     marginTop: 80,
     fontSize: 16,
   },
 
-  // Modal Styles
+  /* Modal Styles */
   modalContainer: {
     flex: 1,
     backgroundColor: 'white',
-    padding: 20,
+    paddingHorizontal: 20,
     paddingTop: 60,
-    flexDirection: 'column',           // Important for marginTop: 'auto'
   },
   modalTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 24,
-    color: '#1f2937',
+    marginBottom: 30,
   },
   input: {
     borderWidth: 1,
-    padding: 16,
     borderRadius: 12,
+    padding: 16,
     fontSize: 18,
-    marginBottom: 24,
+    marginBottom: 30,
   },
-  buttonRow: {
+  actionButtons: {
     flexDirection: 'row',
     gap: 12,
+    marginBottom: 40,
   },
   cancelBtn: {
     flex: 1,
@@ -238,8 +226,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
   },
-  cancelBtnText: {
-    color: '#666666',
+  cancelText: {
+    color: '#666',
     fontSize: 16,
     fontWeight: '500',
   },
@@ -250,27 +238,27 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
   },
-  saveBtnText: {
+  saveText: {
     color: 'white',
     fontWeight: '600',
     fontSize: 16,
   },
 
-  // Delete Button
+  /* Delete Button */
   deleteBtn: {
-    marginTop: 'auto',           // Now works correctly
-    marginBottom: 40,
     padding: 16,
     borderRadius: 12,
     backgroundColor: '#fff5f5',
     borderWidth: 1,
-    borderColor: '#fee2e2',
+    borderColor: '#fecaca',
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
+    marginTop: 'auto',        // This should now work reliably
+    marginBottom: 30,
   },
-  deleteBtnText: {
+  deleteText: {
     color: '#ef4444',
     fontWeight: '600',
     fontSize: 16,
