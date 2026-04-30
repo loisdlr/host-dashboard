@@ -355,12 +355,18 @@ export function RentalProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const deleteCleaner = useCallback((id: string) => {
-    console.log("Context: Deleting cleaner with ID:", id);
-    setState((s) => {
-      const filtered = s.cleaners.filter((c) => String(c.id) !== String(id));
-      return { ...s, cleaners: filtered };
-    });
-  }, []);
+  setState((s) => {
+    // We create a filtered list...
+    const newList = s.cleaners.filter((c) => String(c.id) !== String(id));
+    
+    // ...and we return a NEW object with a NEW array spread into it
+    // The [...] is what tells the screen "WAKE UP, SOMETHING CHANGED!"
+    return { 
+      ...s, 
+      cleaners: [...newList] 
+    };
+  });
+}, []);
 
   // jobs
   const addJob = useCallback((j: Omit<CleaningJob, "id">) => {

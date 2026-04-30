@@ -54,21 +54,19 @@ export default function CleanersScreen() {
       
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 50 }}>
         {cleaners.map((item) => (
-          <Pressable 
-            key={item.id} 
-            onPress={() => { setSelectedCleaner({...item}); setEditVisible(true); }}
-            style={({ pressed }) => [
-              styles.itemRow, 
-              { borderBottomColor: c.border, opacity: pressed ? 0.7 : 1 }
-            ]}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 16, fontWeight: '600', color: c.foreground }}>{item.name}</Text>
-            </View>
-            <Feather name="chevron-right" size={18} color={c.mutedForeground} />
-          </Pressable>
-        ))}
-      </ScrollView>
+  <Pressable 
+    key={item.id} 
+    onPress={() => { setSelectedCleaner({...item}); setEditVisible(true); }}
+    style={styles.itemRow}
+  >
+    <View style={{ flex: 1 }}>
+      <Text style={{ fontSize: 16, fontWeight: '600', color: c.foreground }}>{item.name}</Text>
+      {/* ADD THIS LINE BELOW */}
+      <Text style={{ fontSize: 10, color: 'red' }}>Debug ID: {item.id || "MISSING"}</Text>
+    </View>
+    <Feather name="edit" size={18} color={c.primary} />
+  </Pressable>
+))}
 
       {/* EDIT MODAL */}
       <Modal visible={isEditVisible} animationType="slide">
