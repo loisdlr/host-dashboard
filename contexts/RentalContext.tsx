@@ -21,7 +21,7 @@ import type {
 import { uid } from "@/utils/id";
 import { addDays, todayISO, toISODate } from "@/utils/date";
 
-const STORAGE_KEY = "rental-dashboard:v2";
+const STORAGE_KEY = "rental-data-v2";
 
 const DEFAULT_SETTINGS: Settings = {
   investorSharePct: 60,
