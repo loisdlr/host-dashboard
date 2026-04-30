@@ -346,18 +346,19 @@ export function RentalProvider({ children }: { children: React.ReactNode }) {
   const updateCleaner = useCallback((id: string, patch: Partial<Cleaner>) => {
     setState((s) => ({
       ...s,
-      cleaners: s.cleaners.map((c) => (c.id === id ? { ...c, ...patch } : c)),
+      cleaners: s.cleaners.map((c) => 
+        // Force both to strings to ensure they match
+        String(c.id) === String(id) ? { ...c, ...patch } : c
+      ),
     }));
   }, []);
 
   const deleteCleaner = useCallback((id: string) => {
-  console.log("Context received delete request for ID:", id);
-  setState((s) => {
-    const newCleaners = s.cleaners.filter((c) => String(c.id) !== String(id));
-    console.log("Cleaners before:", s.cleaners.length, "After:", newCleaners.length);
-    return { ...s, cleaners: newCleaners };
-  });
-}, []);
+    setState((s) => ({
+      ...s,
+      cleaners: s.cleaners.filter((c) => String(c.id) !== String(id)),
+    }));
+  }, []);
 
   // jobs
   const addJob = useCallback((j: Omit<CleaningJob, "id">) => {

@@ -37,15 +37,13 @@ export default function CleanersScreen() {
   const handleConfirmDelete = (id: string, name: string) => {
     Alert.alert(
       "Confirm Delete",
-      `Are you sure you want to remove ${name}?`,
+      `Delete ${name}?`,
       [
         { text: "Cancel", style: "cancel" },
         { 
           text: "Delete", 
           style: "destructive", 
-          onPress: () => {
-            deleteCleaner(id);
-          } 
+          onPress: () => deleteCleaner(id) 
         }
       ]
     );
@@ -59,21 +57,21 @@ export default function CleanersScreen() {
         onRightPress={() => setAddVisible(true)} 
       />
       
-      {/* Adding a key to ScrollView forces it to re-render when the list size changes */}
       <ScrollView 
-        key={cleaners.length}
+        key={`list-${cleaners.length}`} // FORCES RE-RENDER ON DELETE
         contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 20, gap: 12 }}
       >
         {cleaners.map((item) => (
           <Card key={item.id} style={styles.card}>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontWeight: '600', color: c.foreground }}>{item.name}</Text>
+              <Text style={{ fontWeight: '600', color: c.foreground, fontSize: 16 }}>{item.name}</Text>
             </View>
             
             <View style={styles.actions}>
               <Pressable 
                 onPress={() => { setSelectedCleaner({...item}); setEditVisible(true); }}
                 style={styles.iconBtn}
+                hitSlop={10}
               >
                 <Feather name="edit-2" size={20} color={c.primary} />
               </Pressable>
@@ -81,6 +79,7 @@ export default function CleanersScreen() {
               <Pressable 
                 onPress={() => handleConfirmDelete(item.id, item.name)}
                 style={styles.iconBtn}
+                hitSlop={10}
               >
                 <Feather name="trash-2" size={20} color={c.destructive} />
               </Pressable>
@@ -89,7 +88,7 @@ export default function CleanersScreen() {
         ))}
       </ScrollView>
 
-      {/* MODALS */}
+      {/* ADD MODAL */}
       <Modal visible={isAddVisible} animationType="slide">
         <View style={{ flex: 1, backgroundColor: c.background, paddingTop: 50 }}>
           <ScreenHeader title="New Staff" leftIcon="x" onLeftPress={() => setAddVisible(false)} />
@@ -99,12 +98,14 @@ export default function CleanersScreen() {
               placeholder="Name"
               value={newName}
               onChangeText={setNewName}
+              autoFocus
             />
-            <Button label="Save" onPress={handleAdd} />
+            <Button label="Save Staff" onPress={handleAdd} />
           </View>
         </View>
       </Modal>
 
+      {/* EDIT MODAL */}
       <Modal visible={isEditVisible} animationType="slide">
         <View style={{ flex: 1, backgroundColor: c.background, paddingTop: 50 }}>
           <ScreenHeader title="Edit Staff" leftIcon="x" onLeftPress={() => setEditVisible(false)} />
@@ -114,7 +115,7 @@ export default function CleanersScreen() {
               value={selectedCleaner?.name}
               onChangeText={(t) => setSelectedCleaner({...selectedCleaner, name: t})}
             />
-            <Button label="Update" onPress={handleUpdate} />
+            <Button label="Update Name" onPress={handleUpdate} />
           </View>
         </View>
       </Modal>
