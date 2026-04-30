@@ -248,9 +248,10 @@ export function RentalProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!ready) return;
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state)).catch(() => {});
-  }, [state, ready]);
+  if (ready) {
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state)).catch(err => console.error("SAVE ERROR:", err));
+  }
+}, [state, ready]);
 
   // bookings
   const addBooking = useCallback(
