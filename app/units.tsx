@@ -2,16 +2,15 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  Alert,
   Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
+  TouchableOpacity,   // ← Added
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Field } from "@/components/Field";
@@ -57,21 +56,34 @@ export default function UnitsScreen() {
 
   const submit = () => {
     if (!name.trim()) {
-      Alert.alert("Enter a name");
+      alert("Please enter a unit name");   // Better for web
       return;
     }
+
     const payload = {
       name: name.trim(),
       type,
       nightlyRate: Number(rate) || 0,
       cleaningFee: Number(cleaning) || 0,
     };
+
     if (editing) {
       updateUnit(editing.id, payload);
       setEditing(null);
     } else {
       addUnit(payload);
       setShowNew(false);
+    }
+  };
+
+  // Fixed Delete Handler for Web
+  const handleDeleteUnit = (unit: Unit) => {
+    const confirmed = window.confirm(
+      `Remove ${unit.name}?\n\nBookings will remain in history.`
+    );
+
+    if (confirmed) {
+      deleteUnit(unit.id);
     }
   };
 
@@ -84,6 +96,7 @@ export default function UnitsScreen() {
         rightIcon="plus"
         onRightPress={openNew}
       />
+
       <ScrollView
         contentContainerStyle={{
           padding: 16,
@@ -93,101 +106,51 @@ export default function UnitsScreen() {
       >
         {units.map((u) => {
           const activeBookings = bookings.filter(
-            (b) => b.unitId === u.id && b.status !== "cancelled",
+            (b) => b.unitId === u.id && b.status !== "cancelled"
           );
+
           return (
             <Card key={u.id}>
               <View style={styles.row}>
                 <View style={{ flex: 1 }}>
-                  <Text
-                    style={{
-                      color: c.foreground,
-                      fontFamily: "Inter_700Bold",
-                      fontSize: 16,
-                    }}
-                  >
-                    {u.name}
-                  </Text>
-                  <Text
-                    style={{
-                      color: c.mutedForeground,
-                      fontFamily: "Inter_400Regular",
-                      fontSize: 12,
-                      marginTop: 2,
-                    }}
-                  >
+                  <Text style={styles.unitName}>{u.name}</Text>
+                  <Text style={styles.unitInfo}>
                     {u.type === "studio" ? "Studio" : "1 Bedroom"} ·{" "}
                     {formatMoney(u.nightlyRate, settings.currency)}/night
                   </Text>
                 </View>
-                <Text
-                  style={{
-                    color: c.mutedForeground,
-                    fontFamily: "Inter_500Medium",
-                    fontSize: 12,
-                  }}
-                >
-                  {activeBookings.length} booking
-                  {activeBookings.length === 1 ? "" : "s"}
+
+                <Text style={styles.bookingCount}>
+                  {activeBookings.length} booking{activeBookings.length === 1 ? "" : "s"}
                 </Text>
               </View>
-              <View
-                style={{
-                  flexDirection: "row",
-                  gap: 8,
-                  marginTop: 12,
-                  alignItems: "center",
-                }}
-              >
-                <Pressable
+
+              <View style={styles.actionRow}>
+                <TouchableOpacity
                   onPress={() => openEdit(u)}
-                  style={({ pressed }) => [
-                    styles.btn,
-                    {
-                      backgroundColor: c.muted,
-                      borderRadius: c.radius - 4,
-                      opacity: pressed ? 0.7 : 1,
-                    },
-                  ]}
+                  style={styles.editButton}
                 >
                   <Feather name="edit-2" size={14} color={c.foreground} />
-                  <Text
-                    style={{
-                      color: c.foreground,
-                      fontFamily: "Inter_600SemiBold",
-                      fontSize: 12,
-                      marginLeft: 6,
-                    }}
-                  >
-                    Edit
-                  </Text>
-                </Pressable>
+                  <Text style={styles.editText}>Edit</Text>
+                </TouchableOpacity>
+
                 <View style={{ flex: 1 }} />
-                <Pressable
-                  hitSlop={10}
-                  onPress={() =>
-                    Alert.alert(
-                      "Delete unit",
-                      `Remove ${u.name}? Bookings will remain in history.`,
-                      [
-                        { text: "Cancel", style: "cancel" },
-                        {
-                          text: "Delete",
-                          style: "destructive",
-                          onPress: () => deleteUnit(u.id),
-                        },
-                      ],
-                    )
-                  }
+
+                {/* Fixed Delete Button */}
+                <TouchableOpacity
+                  onPress={() => handleDeleteUnit(u)}
+                  style={styles.deleteIconButton}
+                  hitSlop={12}
                 >
-                  <Feather name="trash-2" size={16} color={c.mutedForeground} />
-                </Pressable>
+                  <Feather name="trash-2" size={18} color="#ef4444" />
+                </TouchableOpacity>
               </View>
             </Card>
           );
         })}
       </ScrollView>
 
+      {/* Add / Edit Modal */}
       <Modal
         visible={showNew || editing !== null}
         animationType="slide"
@@ -206,6 +169,7 @@ export default function UnitsScreen() {
               setEditing(null);
             }}
           />
+
           <KeyboardAwareScrollViewCompat
             contentContainerStyle={{ padding: 16 }}
             keyboardShouldPersistTaps="handled"
@@ -218,19 +182,9 @@ export default function UnitsScreen() {
               placeholder="Skyline 1201"
               autoCapitalize="words"
             />
+
             <View style={{ marginBottom: 14 }}>
-              <Text
-                style={{
-                  color: c.mutedForeground,
-                  fontFamily: "Inter_500Medium",
-                  fontSize: 12,
-                  textTransform: "uppercase",
-                  letterSpacing: 0.5,
-                  marginBottom: 8,
-                }}
-              >
-                Type
-              </Text>
+              <Text style={styles.label}>Type</Text>
               <SegmentedControl
                 options={[
                   { value: "studio", label: "Studio" },
@@ -243,24 +197,27 @@ export default function UnitsScreen() {
                     String(
                       v === "studio"
                         ? settings.studioRate
-                        : settings.oneBedroomRate,
-                    ),
+                        : settings.oneBedroomRate
+                    )
                   );
                 }}
               />
             </View>
+
             <Field
               label="Nightly rate"
               value={rate}
               onChangeText={setRate}
               keyboardType="numeric"
             />
+
             <Field
               label="Cleaning fee"
               value={cleaning}
               onChangeText={setCleaning}
               keyboardType="numeric"
             />
+
             <Button
               label={editing ? "Save changes" : "Add unit"}
               onPress={submit}
@@ -275,10 +232,51 @@ export default function UnitsScreen() {
 
 const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "flex-start" },
-  btn: {
+  unitName: {
+    color: "#1f2937",
+    fontFamily: "Inter_700Bold",
+    fontSize: 16,
+  },
+  unitInfo: {
+    color: "#6b7280",
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    marginTop: 2,
+  },
+  bookingCount: {
+    color: "#6b7280",
+    fontFamily: "Inter_500Medium",
+    fontSize: 12,
+  },
+  actionRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 12,
+    alignItems: "center",
+  },
+  editButton: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 8,
     paddingHorizontal: 12,
+    backgroundColor: "#f3f4f6",
+    borderRadius: 8,
+  },
+  editText: {
+    color: "#1f2937",
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 12,
+    marginLeft: 6,
+  },
+  deleteIconButton: {
+    padding: 8,
+  },
+  label: {
+    color: "#6b7280",
+    fontFamily: "Inter_500Medium",
+    fontSize: 12,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 8,
   },
 });
