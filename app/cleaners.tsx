@@ -1,14 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  Modal, 
-  StyleSheet, 
-  Pressable, 
-  ScrollView, 
-  Alert 
-} from 'react-native';
+import { View, Text, TextInput, Modal, StyleSheet, Pressable, ScrollView, Alert } from 'react-native';
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -43,14 +34,19 @@ export default function CleanersScreen() {
     }
   };
 
-  const confirmDelete = (id: string, name: string) => {
-    // If you see this Alert, the button is clickable.
+  const handleConfirmDelete = (id: string, name: string) => {
     Alert.alert(
       "Confirm Delete",
-      `Delete ${name}?`,
+      `Are you sure you want to remove ${name}?`,
       [
         { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: () => deleteCleaner(id) }
+        { 
+          text: "Delete", 
+          style: "destructive", 
+          onPress: () => {
+            deleteCleaner(id);
+          } 
+        }
       ]
     );
   };
@@ -63,33 +59,28 @@ export default function CleanersScreen() {
         onRightPress={() => setAddVisible(true)} 
       />
       
+      {/* Adding a key to ScrollView forces it to re-render when the list size changes */}
       <ScrollView 
+        key={cleaners.length}
         contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 20, gap: 12 }}
-        // This ensures the ScrollView doesn't block children taps
-        tapAnywhereToDismiss={false} 
       >
         {cleaners.map((item) => (
           <Card key={item.id} style={styles.card}>
-            <View style={{ flex: 1, justifyContent: 'center' }}>
-              <Text style={{ fontWeight: '600', color: c.foreground, fontSize: 16 }}>
-                {item.name}
-              </Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontWeight: '600', color: c.foreground }}>{item.name}</Text>
             </View>
             
-            {/* ACTION BUTTONS CONTAINER */}
             <View style={styles.actions}>
               <Pressable 
                 onPress={() => { setSelectedCleaner({...item}); setEditVisible(true); }}
-                style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.5 : 1 }]}
-                hitSlop={15} // Makes it easier to tap
+                style={styles.iconBtn}
               >
                 <Feather name="edit-2" size={20} color={c.primary} />
               </Pressable>
               
               <Pressable 
-                onPress={() => confirmDelete(item.id, item.name)}
-                style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.5 : 1 }]}
-                hitSlop={15}
+                onPress={() => handleConfirmDelete(item.id, item.name)}
+                style={styles.iconBtn}
               >
                 <Feather name="trash-2" size={20} color={c.destructive} />
               </Pressable>
@@ -98,7 +89,7 @@ export default function CleanersScreen() {
         ))}
       </ScrollView>
 
-      {/* ADD & EDIT MODALS STAY THE SAME AS PREVIOUS CODE */}
+      {/* MODALS */}
       <Modal visible={isAddVisible} animationType="slide">
         <View style={{ flex: 1, backgroundColor: c.background, paddingTop: 50 }}>
           <ScreenHeader title="New Staff" leftIcon="x" onLeftPress={() => setAddVisible(false)} />
@@ -132,21 +123,9 @@ export default function CleanersScreen() {
 }
 
 const styles = StyleSheet.create({
-  card: { 
-    flexDirection: 'row', 
-    padding: 16, 
-    alignItems: 'center',
-    minHeight: 70, // Ensures a consistent height for tapping
-  },
-  actions: { 
-    flexDirection: 'row', 
-    gap: 20, 
-    alignItems: 'center',
-    zIndex: 99, // Brings buttons to the front
-  },
-  iconBtn: { 
-    padding: 10, // Larger tap target
-  },
+  card: { flexDirection: 'row', padding: 16, alignItems: 'center', minHeight: 60 },
+  actions: { flexDirection: 'row', gap: 15 },
+  iconBtn: { padding: 8 },
   form: { padding: 20, gap: 15 },
-  input: { borderWidth: 1, padding: 14, borderRadius: 10, fontSize: 16 }
+  input: { borderWidth: 1, padding: 12, borderRadius: 8, fontSize: 16 }
 });
