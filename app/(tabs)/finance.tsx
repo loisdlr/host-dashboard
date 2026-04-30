@@ -8,12 +8,9 @@ import {
   Text,
   View,
   TouchableOpacity,
+  Modal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import ReanimatedSwipeable, {
-  SwipeableMethods,
-} from "react-native-gesture-handler/ReanimatedSwipeable";
-import Reanimated, { SharedValue, useAnimatedStyle } from "react-native-reanimated";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
@@ -44,6 +41,7 @@ export default function FinanceScreen() {
 
   const [unitId, setUnitId] = useState<"all" | string>("all");
   const [period, setPeriod] = useState<Period>("month");
+  const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null); // For edit/delete modal
 
   const range = useMemo(() => {
     const now = parseISODate(todayISO());
@@ -72,18 +70,18 @@ export default function FinanceScreen() {
     if (range) {
       list = list.filter((e) => e.date >= range.start && e.date <= range.end);
     }
-    return list.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6);
+    return list.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8);
   }, [expenses, unitId, range]);
 
   const periodLabel = period === "month" ? "This month" : period === "ytd" ? "Year to date" : "All time";
 
-  // ==================== PDF EXPORT (Temporarily Disabled) ====================
+  // PDF Export (Temporarily disabled)
   const onExportPdf = () => {
     alert("PDF export is not fully implemented yet.\n\nThis feature will be available soon.");
   };
 
-  // ==================== DELETE EXPENSE ====================
-  const handleDeleteExpense = (id: string, swipeable?: SwipeableMethods) => {
+  // Delete Expense
+  const handleDelete = (id: string) => {
     const expense = expenses.find((e) => e.id === id);
     if (!expense) return;
 
@@ -93,31 +91,8 @@ export default function FinanceScreen() {
 
     if (confirmed) {
       deleteExpense(id);
+      setSelectedExpense(null);
     }
-    swipeable?.close();
-  };
-
-  // Swipe Right Action - Only Delete
-  const renderRightActions = (
-    prog: SharedValue<number>,
-    drag: SharedValue<number>,
-    swipeable: SwipeableMethods,
-    expenseId: string
-  ) => {
-    const animatedStyle = useAnimatedStyle(() => ({
-      transform: [{ translateX: drag.value + 100 }],
-    }));
-
-    return (
-      <Reanimated.View style={[animatedStyle, styles.actionsContainer]}>
-        <TouchableOpacity
-          onPress={() => handleDeleteExpense(expenseId, swipeable)}
-          style={[styles.actionButton, { backgroundColor: "#ef4444" }]}
-        >
-          <Feather name="trash-2" size={22} color="white" />
-        </TouchableOpacity>
-      </Reanimated.View>
-    );
   };
 
   return (
@@ -175,20 +150,14 @@ export default function FinanceScreen() {
           <Text style={[styles.statValue, { color: result.net >= 0 ? c.foreground : c.destructive }]}>
             {formatMoney(result.net, settings.currency)}
           </Text>
-
           <View style={[styles.divider, { borderColor: c.border, marginVertical: 14 }]} />
-
           <View style={{ gap: 10 }}>
             <Row label="Gross income" value={formatMoney(result.gross, settings.currency)} />
-            <Row
-              label="Expenses"
-              value={`- ${formatMoney(result.expenses, settings.currency)}`}
-              valueColor={c.destructive}
-            />
+            <Row label="Expenses" value={`- ${formatMoney(result.expenses, settings.currency)}`} valueColor={c.destructive} />
           </View>
         </Card>
 
-        {/* Profit Distribution Card */}
+        {/* Profit Distribution */}
         <Card>
           <View style={styles.rowBetween}>
             <View>
@@ -221,7 +190,7 @@ export default function FinanceScreen() {
 
         {/* Recent Expenses */}
         <View>
-          <View style={[styles.rowBetween, { marginBottom: 10 }]}>
+          <View style={[styles.rowBetween, { marginBottom: 12 }]}>
             <Text style={styles.sectionTitle}>Recent expenses</Text>
             <Button
               label="Add"
@@ -234,49 +203,89 @@ export default function FinanceScreen() {
 
           <Card style={{ padding: 0, overflow: "hidden" }}>
             {recentExpenses.length === 0 ? (
-              <EmptyState
-                icon="dollar-sign"
-                title="No expenses yet"
-                description="Track repairs and bills here."
-              />
+              <EmptyState icon="dollar-sign" title="No expenses yet" description="Track repairs and bills here." />
             ) : (
               recentExpenses.map((e, idx) => (
-                <ReanimatedSwipeable
+                <View
                   key={e.id}
-                  friction={2}
-                  rightThreshold={60}
-                  renderRightActions={(prog, drag, sw) => renderRightActions(prog, drag, sw, e.id)}
+                  style={[
+                    styles.expenseRow,
+                    { borderTopWidth: idx === 0 ? 0 : StyleSheet.hairlineWidth, borderTopColor: c.border },
+                  ]}
                 >
-                  <Pressable
-                    onPress={() => router.push(`/expense/${e.id}`)}
-                    style={({ pressed }) => [
-                      styles.expenseRow,
-                      {
-                        backgroundColor: pressed ? c.accent : c.card,
-                        borderTopWidth: idx === 0 ? 0 : StyleSheet.hairlineWidth,
-                        borderTopColor: c.border,
-                      },
-                    ]}
-                  >
-                    <View style={styles.expenseIcon}>
-                      <Feather name="tag" size={16} color={c.primary} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.expenseDesc}>{e.description || e.category}</Text>
-                      <Text style={styles.expenseMeta}>
-                        {e.category} · {units.find((u) => u.id === e.unitId)?.name ?? "All Units"} · {formatLong(e.date)}
-                      </Text>
-                    </View>
-                    <Text style={styles.expenseAmount}>
-                      -{formatMoney(e.amount, settings.currency)}
+                  <View style={styles.expenseIcon}>
+                    <Feather name="tag" size={16} color={c.primary} />
+                  </View>
+
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.expenseDesc}>{e.description || e.category}</Text>
+                    <Text style={styles.expenseMeta}>
+                      {e.category} · {units.find((u) => u.id === e.unitId)?.name ?? "All Units"} · {formatLong(e.date)}
                     </Text>
-                  </Pressable>
-                </ReanimatedSwipeable>
+                  </View>
+
+                  <Text style={styles.expenseAmount}>
+                    -{formatMoney(e.amount, settings.currency)}
+                  </Text>
+
+                  {/* Edit Button */}
+                  <TouchableOpacity
+                    onPress={() => setSelectedExpense(e)}
+                    style={styles.editButton}
+                  >
+                    <Feather name="edit-2" size={18} color={c.primary} />
+                  </TouchableOpacity>
+                </View>
               ))
             )}
           </Card>
         </View>
       </ScrollView>
+
+      {/* Edit / Delete Modal */}
+      <Modal
+        visible={!!selectedExpense}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedExpense(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Expense Options</Text>
+            <Text style={styles.modalSubtitle}>
+              {selectedExpense?.description || selectedExpense?.category}
+            </Text>
+
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={() => {
+                if (selectedExpense) {
+                  router.push(`/expense/${selectedExpense.id}`);
+                  setSelectedExpense(null);
+                }
+              }}
+            >
+              <Feather name="edit-2" size={20} color={c.primary} />
+              <Text style={styles.modalButtonText}>Edit Expense</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.modalButton, styles.deleteModalButton]}
+              onPress={() => selectedExpense && handleDelete(selectedExpense.id)}
+            >
+              <Feather name="trash-2" size={20} color="#ef4444" />
+              <Text style={styles.deleteModalText}>Delete Expense</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setSelectedExpense(null)}
+            >
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -307,16 +316,14 @@ function UnitChip({ label, active, onPress }: { label: string; active: boolean; 
   const c = useColors();
   return (
     <Pressable onPress={onPress}>
-      <View
-        style={{
-          paddingVertical: 8,
-          paddingHorizontal: 14,
-          borderRadius: 999,
-          backgroundColor: active ? c.primary : c.muted,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: active ? c.primary : c.border,
-        }}
-      >
+      <View style={{
+        paddingVertical: 8,
+        paddingHorizontal: 14,
+        borderRadius: 999,
+        backgroundColor: active ? c.primary : c.muted,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: active ? c.primary : c.border,
+      }}>
         <Text style={{ color: active ? c.primaryForeground : c.foreground, fontWeight: "600", fontSize: 12 }}>
           {label}
         </Text>
@@ -327,18 +334,17 @@ function UnitChip({ label, active, onPress }: { label: string; active: boolean; 
 
 const styles = StyleSheet.create({
   rowBetween: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  sectionTitle: { fontFamily: "Inter_700Bold", fontSize: 16 },
-  subText: { fontFamily: "Inter_400Regular", fontSize: 12, color: "#6b7280" },
+  sectionTitle: { fontSize: 16, fontWeight: "700" },
+  subText: { fontSize: 12, color: "#6b7280" },
   splitRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   splitLabel: { fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, color: "#6b7280" },
-  splitValue: { fontFamily: "Inter_700Bold", fontSize: 22 },
+  splitValue: { fontSize: 22, fontWeight: "700" },
   statLabel: { fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5 },
   statValue: { fontSize: 32, marginTop: 6, fontWeight: "700" },
   expenseRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    padding: 16,
     gap: 12,
   },
   expenseIcon: {
@@ -352,12 +358,64 @@ const styles = StyleSheet.create({
   expenseDesc: { fontWeight: "600", fontSize: 14.5 },
   expenseMeta: { color: "#6b7280", fontSize: 11.5, marginTop: 2 },
   expenseAmount: { color: "#ef4444", fontWeight: "700", fontSize: 15.5 },
-  actionsContainer: { flexDirection: "row", width: 100, height: "100%" },
-  actionButton: {
-    width: 100,
-    height: "100%",
+  editButton: {
+    padding: 8,
+  },
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
     alignItems: "center",
+  },
+  modalContent: {
+    backgroundColor: "white",
+    borderRadius: 16,
+    width: "85%",
+    padding: 20,
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 24,
+  },
+  modalButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    width: "100%",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 10,
+    backgroundColor: "#f8f9fa",
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  deleteModalButton: {
+    backgroundColor: "#fff5f5",
+  },
+  deleteModalText: {
+    color: "#ef4444",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  cancelButton: {
+    marginTop: 10,
+    padding: 12,
+  },
+  cancelText: {
+    color: "#666",
+    fontSize: 16,
   },
   divider: { borderTopWidth: StyleSheet.hairlineWidth },
 });
