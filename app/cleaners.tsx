@@ -42,32 +42,21 @@ export default function CleanersScreen() {
   };
 
   const handleDelete = () => {
-    console.log("🗑️  handleDelete called");
-    console.log("Current selectedCleaner:", selectedCleaner);
+  if (!selectedCleaner?.id) {
+    alert("Cannot delete: No staff selected");
+    return;
+  }
 
-    if (!selectedCleaner || !selectedCleaner.id) {
-      Alert.alert("Error", "Cannot delete: No staff selected");
-      return;
-    }
+  const confirmDelete = window.confirm(
+    `Are you sure you want to remove "${selectedCleaner.name}"?`
+  );
 
-    Alert.alert(
-      "Confirm Delete",
-      `Are you sure you want to remove "${selectedCleaner.name}"?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            console.log("✅ User confirmed deletion of ID:", selectedCleaner.id);
-            deleteCleaner(selectedCleaner.id);
-            setEditVisible(false);
-            setSelectedCleaner(null);
-          },
-        },
-      ]
-    );
-  };
+  if (confirmDelete) {
+    deleteCleaner(selectedCleaner.id);
+    setEditVisible(false);
+    setSelectedCleaner(null);
+  }
+};
 
   const handleAdd = () => {
     if (newName.trim()) {
@@ -110,37 +99,47 @@ export default function CleanersScreen() {
       </ScrollView>
 
       {/* EDIT MODAL */}
-      <Modal visible={isEditVisible} animationType="slide" transparent={false}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
-          <View style={{ flex: 1, padding: 20, paddingTop: 100 }}>
+<Modal visible={isEditVisible} animationType="slide" transparent={false}>
+  <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
+    <View style={{ flex: 1, padding: 20, paddingTop: 80 }}>
 
-            <Text style={styles.modalTitle}>Edit Staff</Text>
+      <Text style={styles.modalTitle}>Edit Staff</Text>
 
-            <TextInput
-              style={[styles.input, { borderColor: c.border, color: c.foreground }]}
-              value={selectedCleaner?.name || ''}
-              onChangeText={(t) => setSelectedCleaner((prev) => prev ? { ...prev, name: t } : null)}
-              placeholder="Staff name"
-              autoFocus
-            />
+      <TextInput
+        style={[styles.input, { borderColor: c.border, color: c.foreground }]}
+        value={selectedCleaner?.name || ''}
+        onChangeText={(t) => 
+          setSelectedCleaner((prev: any) => prev ? { ...prev, name: t } : null)
+        }
+        placeholder="Staff name"
+        autoFocus
+      />
 
-            <View style={styles.buttonRow}>
-              <TouchableOpacity onPress={() => { setEditVisible(false); setSelectedCleaner(null); }} style={styles.cancelBtn}>
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleUpdate} style={styles.saveBtn}>
-                <Text style={styles.saveText}>Update</Text>
-              </TouchableOpacity>
-            </View>
+      <View style={styles.buttonRow}>
+        <TouchableOpacity
+          onPress={() => {
+            setEditVisible(false);
+            setSelectedCleaner(null);
+          }}
+          style={styles.cancelBtn}
+        >
+          <Text style={styles.cancelText}>Cancel</Text>
+        </TouchableOpacity>
 
-            <TouchableOpacity onPress={handleDelete} style={styles.deleteBtn}>
-              <Feather name="trash-2" size={24} color="#ef4444" />
-              <Text style={styles.deleteText}>Remove Staff Member</Text>
-            </TouchableOpacity>
+        <TouchableOpacity onPress={handleUpdate} style={styles.saveBtn}>
+          <Text style={styles.saveText}>Update</Text>
+        </TouchableOpacity>
+      </View>
 
-          </View>
-        </SafeAreaView>
-      </Modal>
+      {/* Delete Button */}
+      <TouchableOpacity onPress={handleDelete} style={styles.deleteBtn}>
+        <Feather name="trash-2" size={24} color="#ef4444" />
+        <Text style={styles.deleteText}>Remove Staff Member</Text>
+      </TouchableOpacity>
+
+    </View>
+  </SafeAreaView>
+</Modal>
 
       {/* ADD MODAL */}
       <Modal visible={isAddVisible} animationType="slide" transparent={false}>
@@ -216,5 +215,22 @@ const styles = StyleSheet.create({
     color: '#ef4444',
     fontWeight: '700',
     fontSize: 17,
+  },
+  deleteBtn: {
+  marginTop: 40,
+  padding: 18,
+  backgroundColor: '#fee2e2',
+  borderRadius: 12,
+  borderWidth: 2,
+  borderColor: '#ef4444',
+  flexDirection: 'row',
+  justifyContent: 'center',
+  alignItems: 'center',
+  gap: 10,
+  },
+  deleteText: {
+  color: '#ef4444',
+  fontWeight: '700',
+  fontSize: 17,
   },
 });
