@@ -26,11 +26,12 @@ export default function CleanersScreen() {
   const [selectedCleaner, setSelectedCleaner] = useState<any>(null);
   const [newName, setNewName] = useState("");
 
+  // ==================== HANDLERS ====================
   const openEdit = (cleaner: any) => {
-  console.log("Opening edit for:", cleaner);   // ← Add this
-  setSelectedCleaner({ ...cleaner });
-  setEditVisible(true);
-};
+    console.log("📌 openEdit called with:", cleaner);
+    setSelectedCleaner({ ...cleaner });
+    setEditVisible(true);
+  };
 
   const handleUpdate = () => {
     if (selectedCleaner?.id && selectedCleaner.name?.trim()) {
@@ -41,32 +42,32 @@ export default function CleanersScreen() {
   };
 
   const handleDelete = () => {
-  console.log("Delete button pressed");
-  console.log("selectedCleaner:", selectedCleaner);
+    console.log("🗑️  handleDelete called");
+    console.log("Current selectedCleaner:", selectedCleaner);
 
-  if (!selectedCleaner || !selectedCleaner.id) {
-    Alert.alert("Error", "No staff member selected or missing ID");
-    return;
-  }
+    if (!selectedCleaner || !selectedCleaner.id) {
+      Alert.alert("Error", "Cannot delete: No staff selected");
+      return;
+    }
 
-  Alert.alert(
-    "Confirm Delete",
-    `Are you sure you want to remove "${selectedCleaner.name}"?`,
-    [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: () => {
-          console.log("User confirmed delete for ID:", selectedCleaner.id);
-          deleteCleaner(selectedCleaner.id);
-          setEditVisible(false);
-          setSelectedCleaner(null);
+    Alert.alert(
+      "Confirm Delete",
+      `Are you sure you want to remove "${selectedCleaner.name}"?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            console.log("✅ User confirmed deletion of ID:", selectedCleaner.id);
+            deleteCleaner(selectedCleaner.id);
+            setEditVisible(false);
+            setSelectedCleaner(null);
+          },
         },
-      },
-    ]
-  );
-};
+      ]
+    );
+  };
 
   const handleAdd = () => {
     if (newName.trim()) {
@@ -84,12 +85,7 @@ export default function CleanersScreen() {
         onRightPress={() => setAddVisible(true)}
       />
 
-      <ScrollView
-        contentContainerStyle={{
-          padding: 16,
-          paddingBottom: insets.bottom + 40,
-        }}
-      >
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 40 }}>
         {cleaners.length === 0 ? (
           <Text style={{ textAlign: 'center', color: '#999', marginTop: 100 }}>
             No staff members yet
@@ -113,47 +109,35 @@ export default function CleanersScreen() {
         )}
       </ScrollView>
 
-      {/* ==================== EDIT MODAL ==================== */}
+      {/* EDIT MODAL */}
       <Modal visible={isEditVisible} animationType="slide" transparent={false}>
         <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
-          <View style={{ flex: 1, padding: 20, paddingTop: 80 }}>
+          <View style={{ flex: 1, padding: 20, paddingTop: 100 }}>
+
             <Text style={styles.modalTitle}>Edit Staff</Text>
 
             <TextInput
               style={[styles.input, { borderColor: c.border, color: c.foreground }]}
               value={selectedCleaner?.name || ''}
-              onChangeText={(t) =>
-                setSelectedCleaner((prev: any) => (prev ? { ...prev, name: t } : null))
-              }
+              onChangeText={(t) => setSelectedCleaner((prev) => prev ? { ...prev, name: t } : null)}
               placeholder="Staff name"
               autoFocus
             />
 
             <View style={styles.buttonRow}>
-              <TouchableOpacity
-                onPress={() => {
-                  setEditVisible(false);
-                  setSelectedCleaner(null);
-                }}
-                style={styles.cancelBtn}
-              >
+              <TouchableOpacity onPress={() => { setEditVisible(false); setSelectedCleaner(null); }} style={styles.cancelBtn}>
                 <Text style={styles.cancelText}>Cancel</Text>
               </TouchableOpacity>
-
               <TouchableOpacity onPress={handleUpdate} style={styles.saveBtn}>
                 <Text style={styles.saveText}>Update</Text>
               </TouchableOpacity>
             </View>
 
-            {/* DELETE BUTTON */}
-            <TouchableOpacity
-              onPress={handleDelete}
-              activeOpacity={0.7}
-              style={styles.deleteBtn}
-            >
+            <TouchableOpacity onPress={handleDelete} style={styles.deleteBtn}>
               <Feather name="trash-2" size={24} color="#ef4444" />
               <Text style={styles.deleteText}>Remove Staff Member</Text>
             </TouchableOpacity>
+
           </View>
         </SafeAreaView>
       </Modal>
@@ -161,9 +145,8 @@ export default function CleanersScreen() {
       {/* ADD MODAL */}
       <Modal visible={isAddVisible} animationType="slide" transparent={false}>
         <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
-          <View style={{ flex: 1, padding: 20, paddingTop: 80 }}>
+          <View style={{ flex: 1, padding: 20, paddingTop: 100 }}>
             <Text style={styles.modalTitle}>New Staff Member</Text>
-
             <TextInput
               style={[styles.input, { borderColor: c.border, color: c.foreground }]}
               value={newName}
@@ -171,18 +154,13 @@ export default function CleanersScreen() {
               placeholder="Enter name..."
               autoFocus
             />
-
             <View style={styles.buttonRow}>
               <TouchableOpacity
-                onPress={() => {
-                  setAddVisible(false);
-                  setNewName("");
-                }}
+                onPress={() => { setAddVisible(false); setNewName(""); }}
                 style={styles.cancelBtn}
               >
                 <Text style={styles.cancelText}>Cancel</Text>
               </TouchableOpacity>
-
               <TouchableOpacity onPress={handleAdd} style={styles.saveBtn}>
                 <Text style={styles.saveText}>Save</Text>
               </TouchableOpacity>
@@ -202,32 +180,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  name: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  idText: {
-    fontSize: 10,
-    color: '#999',
-    marginTop: 4,
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 30,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 18,
-    marginBottom: 30,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 50,
-  },
+  name: { fontSize: 16, fontWeight: '600' },
+  idText: { fontSize: 10, color: '#999', marginTop: 4 },
+  modalTitle: { fontSize: 24, fontWeight: 'bold', marginBottom: 30 },
+  input: { borderWidth: 1, borderRadius: 12, padding: 16, fontSize: 18, marginBottom: 30 },
+  buttonRow: { flexDirection: 'row', gap: 12, marginBottom: 50 },
   cancelBtn: {
     flex: 1,
     padding: 16,
@@ -235,10 +192,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
   },
-  cancelText: {
-    color: '#666',
-    fontSize: 16,
-  },
+  cancelText: { color: '#666', fontSize: 16 },
   saveBtn: {
     flex: 1,
     padding: 16,
@@ -246,11 +200,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
   },
-  saveText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 16,
-  },
+  saveText: { color: 'white', fontWeight: '600', fontSize: 16 },
   deleteBtn: {
     padding: 18,
     backgroundColor: '#fee2e2',
