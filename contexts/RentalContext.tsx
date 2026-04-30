@@ -355,10 +355,11 @@ export function RentalProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const deleteCleaner = useCallback((id: string) => {
-    setState((s) => ({
-      ...s,
-      cleaners: s.cleaners.filter((c) => String(c.id) !== String(id)),
-    }));
+    console.log("Context: Deleting cleaner with ID:", id);
+    setState((s) => {
+      const filtered = s.cleaners.filter((c) => String(c.id) !== String(id));
+      return { ...s, cleaners: filtered };
+    });
   }, []);
 
   // jobs

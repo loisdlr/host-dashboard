@@ -33,8 +33,13 @@ export default function CleanersScreen() {
   };
 
   const handleDeleteInsideEdit = () => {
-    if (!selectedCleaner) return;
-    
+    if (!selectedCleaner?.id) {
+      Alert.alert("Error", "Could not find ID for this staff member.");
+      return;
+    }
+
+    const cleanerIdToDelete = String(selectedCleaner.id);
+
     Alert.alert(
       "Confirm Delete",
       `Are you sure you want to remove ${selectedCleaner.name}?`,
@@ -44,7 +49,7 @@ export default function CleanersScreen() {
           text: "Delete Staff", 
           style: "destructive", 
           onPress: () => {
-            deleteCleaner(selectedCleaner.id);
+            deleteCleaner(cleanerIdToDelete); // Call the context function
             setEditVisible(false);
             setSelectedCleaner(null);
           } 
