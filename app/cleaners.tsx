@@ -26,6 +26,11 @@ export default function CleanersScreen() {
   const [selectedCleaner, setSelectedCleaner] = useState<any>(null);
   const [newName, setNewName] = useState("");
 
+  const openEdit = (cleaner: any) => {
+    setSelectedCleaner({ ...cleaner });
+    setEditVisible(true);
+  };
+
   const handleUpdate = () => {
     if (selectedCleaner?.id && selectedCleaner.name?.trim()) {
       updateCleaner(selectedCleaner.id, { name: selectedCleaner.name.trim() });
@@ -35,6 +40,8 @@ export default function CleanersScreen() {
   };
 
   const handleDelete = () => {
+    console.log("✅ handleDelete called!");   // ← Check your console
+
     if (!selectedCleaner?.id) {
       Alert.alert("Error", "No staff selected");
       return;
@@ -42,11 +49,11 @@ export default function CleanersScreen() {
 
     Alert.alert(
       "Confirm Delete",
-      `Are you sure you want to remove "${selectedCleaner.name}"?`,
+      `Delete "${selectedCleaner.name}"?`,
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Delete Staff",
+          text: "Delete",
           style: "destructive",
           onPress: () => {
             deleteCleaner(selectedCleaner.id);
@@ -56,11 +63,6 @@ export default function CleanersScreen() {
         },
       ]
     );
-  };
-
-  const openEdit = (cleaner: any) => {
-    setSelectedCleaner({ ...cleaner });
-    setEditVisible(true);
   };
 
   const handleAdd = () => {
@@ -81,13 +83,25 @@ export default function CleanersScreen() {
 
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 40 }}>
         {cleaners.length === 0 ? (
-          <Text style={styles.emptyText}>No staff members yet</Text>
+          <Text style={{ textAlign: 'center', color: '#999', marginTop: 100 }}>
+            No staff members yet
+          </Text>
         ) : (
           cleaners.map((item) => (
-            <Pressable key={item.id} onPress={() => openEdit(item)} style={styles.itemRow}>
+            <Pressable
+              key={item.id}
+              onPress={() => openEdit(item)}
+              style={{
+                padding: 18,
+                borderBottomWidth: 1,
+                borderBottomColor: '#eee',
+                flexDirection: 'row',
+                alignItems: 'center',
+              }}
+            >
               <View style={{ flex: 1 }}>
-                <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.idText}>
+                <Text style={{ fontSize: 16, fontWeight: '600' }}>{item.name}</Text>
+                <Text style={{ fontSize: 10, color: '#999' }}>
                   ID: {item.id ? String(item.id).slice(0, 8) : 'MISSING'}
                 </Text>
               </View>
@@ -97,14 +111,25 @@ export default function CleanersScreen() {
         )}
       </ScrollView>
 
-      {/* EDIT MODAL - Simplified & Debugged */}
+      {/* ==================== EDIT MODAL (Very Simple) ==================== */}
       <Modal visible={isEditVisible} animationType="slide" transparent={false}>
-        <SafeAreaView style={styles.modalSafeArea}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Edit Staff</Text>
+        <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
+          <View style={{ flex: 1, padding: 20, paddingTop: 60 }}>
+
+            <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 30 }}>
+              Edit Staff
+            </Text>
 
             <TextInput
-              style={[styles.input, { borderColor: c.border, color: c.foreground }]}
+              style={{
+                borderWidth: 1,
+                borderColor: c.border || '#ccc',
+                borderRadius: 12,
+                padding: 16,
+                fontSize: 18,
+                marginBottom: 30,
+                color: c.foreground,
+              }}
               value={selectedCleaner?.name || ''}
               onChangeText={(t) =>
                 setSelectedCleaner((prev: any) => (prev ? { ...prev, name: t } : null))
@@ -113,63 +138,94 @@ export default function CleanersScreen() {
               autoFocus
             />
 
-            <View style={styles.buttonRow}>
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 40 }}>
               <Pressable
                 onPress={() => {
                   setEditVisible(false);
                   setSelectedCleaner(null);
                 }}
-                style={styles.cancelBtn}
+                style={{
+                  flex: 1,
+                  padding: 16,
+                  backgroundColor: '#f3f4f6',
+                  borderRadius: 12,
+                  alignItems: 'center',
+                }}
               >
-                <Text style={styles.cancelText}>Cancel</Text>
+                <Text style={{ color: '#666', fontSize: 16 }}>Cancel</Text>
               </Pressable>
 
-              <Pressable onPress={handleUpdate} style={styles.saveBtn}>
-                <Text style={styles.saveText}>Update</Text>
+              <Pressable
+                onPress={handleUpdate}
+                style={{
+                  flex: 1,
+                  padding: 16,
+                  backgroundColor: '#007AFF',
+                  borderRadius: 12,
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ color: 'white', fontWeight: '600', fontSize: 16 }}>Update</Text>
               </Pressable>
             </View>
 
-            {/* Delete Button with extra debugging styles */}
+            {/* DELETE BUTTON - Extremely simple & visible */}
             <Pressable
               onPress={handleDelete}
-              style={styles.deleteBtn}
-              // These help with debugging:
-              hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+              style={{
+                padding: 18,
+                backgroundColor: '#fee2e2',
+                borderRadius: 12,
+                borderWidth: 2,
+                borderColor: '#ef4444',
+                alignItems: 'center',
+                flexDirection: 'row',
+                justifyContent: 'center',
+                gap: 10,
+              }}
             >
               <Feather name="trash-2" size={22} color="#ef4444" />
-              <Text style={styles.deleteText}>Remove Staff Member</Text>
+              <Text style={{ color: '#ef4444', fontWeight: '600', fontSize: 16 }}>
+                Remove Staff Member
+              </Text>
             </Pressable>
+
           </View>
         </SafeAreaView>
       </Modal>
 
-      {/* ADD MODAL */}
+      {/* ADD MODAL - unchanged for now */}
       <Modal visible={isAddVisible} animationType="slide" transparent={false}>
-        <SafeAreaView style={styles.modalSafeArea}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>New Staff Member</Text>
-
+        <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
+          <View style={{ flex: 1, padding: 20, paddingTop: 60 }}>
+            <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 30 }}>New Staff</Text>
             <TextInput
-              style={[styles.input, { borderColor: c.border, color: c.foreground }]}
+              style={{
+                borderWidth: 1,
+                borderColor: c.border || '#ccc',
+                borderRadius: 12,
+                padding: 16,
+                fontSize: 18,
+                marginBottom: 30,
+                color: c.foreground,
+              }}
               value={newName}
               onChangeText={setNewName}
               placeholder="Enter name..."
               autoFocus
             />
-
-            <View style={styles.buttonRow}>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
               <Pressable
-                onPress={() => {
-                  setAddVisible(false);
-                  setNewName("");
-                }}
-                style={styles.cancelBtn}
+                onPress={() => { setAddVisible(false); setNewName(""); }}
+                style={{ flex: 1, padding: 16, backgroundColor: '#f3f4f6', borderRadius: 12, alignItems: 'center' }}
               >
-                <Text style={styles.cancelText}>Cancel</Text>
+                <Text style={{ color: '#666' }}>Cancel</Text>
               </Pressable>
-
-              <Pressable onPress={handleAdd} style={styles.saveBtn}>
-                <Text style={styles.saveText}>Save</Text>
+              <Pressable
+                onPress={handleAdd}
+                style={{ flex: 1, padding: 16, backgroundColor: '#007AFF', borderRadius: 12, alignItems: 'center' }}
+              >
+                <Text style={{ color: 'white', fontWeight: '600' }}>Save</Text>
               </Pressable>
             </View>
           </View>
@@ -178,79 +234,3 @@ export default function CleanersScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  itemRow: {
-    flexDirection: 'row',
-    paddingVertical: 18,
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  name: { fontSize: 16, fontWeight: '600' },
-  idText: { fontSize: 10, color: '#999', marginTop: 2 },
-  emptyText: { textAlign: 'center', color: '#999', marginTop: 80, fontSize: 16 },
-
-  modalSafeArea: {
-    flex: 1,
-    backgroundColor: 'white',
-  },
-  modalContent: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 60,
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 30,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 18,
-    marginBottom: 30,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 40,
-  },
-  cancelBtn: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: '#f3f4f6',
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  cancelText: { color: '#666', fontSize: 16, fontWeight: '500' },
-  saveBtn: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: '#007AFF',
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  saveText: { color: 'white', fontWeight: '600', fontSize: 16 },
-
-  deleteBtn: {
-    marginTop: 'auto',
-    marginBottom: 40,
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-    backgroundColor: '#fff5f5',
-    borderWidth: 1.5,
-    borderColor: '#fecaca',
-    borderRadius: 12,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 10,
-  },
-  deleteText: {
-    color: '#ef4444',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-});
