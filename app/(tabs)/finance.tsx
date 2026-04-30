@@ -1,14 +1,14 @@
-import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
   Text,
   View,
-  TouchableOpacity,
   Alert,
+  Pressable,
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
@@ -26,7 +26,6 @@ import {
   splitForUnit,
 } from "@/utils/finance";
 import {
-  formatLong,
   parseISODate,
   todayISO,
   toISODate,
@@ -39,11 +38,12 @@ export default function FinanceScreen() {
   const c = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { units, bookings, expenses, settings, deleteExpense } = useRental();
+  const { units, bookings, expenses, settings } = useRental();
 
   const [unitId, setUnitId] = useState<"all" | string>("all");
   const [period, setPeriod] = useState<Period>("month");
 
+  // Calculate Date Range
   const range = useMemo(() => {
     const now = parseISODate(todayISO());
     if (period === "month") {
@@ -58,11 +58,14 @@ export default function FinanceScreen() {
     return undefined; // All time
   }, [period]);
 
+  // Calculate Financial Results
   const result = useMemo(() => {
+    if (!settings) return { net: 0, investorShare: 0, operatorShare: 0 };
     if (unitId === "all") return splitForAll(bookings, expenses, settings, range);
     return splitForUnit(unitId, bookings, expenses, settings, range);
   }, [unitId, bookings, expenses, settings, range]);
 
+  // Filter Expenses for the List
   const filteredExpenses = useMemo(() => {
     let list = [...expenses];
     if (unitId !== "all") {
@@ -76,15 +79,12 @@ export default function FinanceScreen() {
 
   const periodLabel = period === "month" ? "This month" : period === "ytd" ? "Year to date" : "All time";
 
-  // ==================== PDF EXPORT ====================
+  // PDF EXPORT LOGIC
   const onExportPdf = async () => {
     try {
-      const targetUnits = unitId === "all" 
-        ? units 
-        : units.filter((u) => u.id === unitId);
-
-      if (targetUnits.length === 0) {
-        Alert.alert("No unit selected");
+      const targetUnits = unitId === "all" ? units : units.filter((u) => u.id === unitId);
+      if (targetUnits.length === 0 && unitId !== "all") {
+        Alert.alert("Error", "No unit selected");
         return;
       }
 
@@ -94,33 +94,36 @@ export default function FinanceScreen() {
         <html>
           <head>
             <style>
-              body { font-family: Arial, sans-serif; padding: 30px; }
-              h1 { text-align: center; }
-              table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-              th { background-color: #f0f0f0; }
+              body { font-family: sans-serif; padding: 40px; color: #333; }
+              h1 { text-align: center; color: #000; }
+              .summary { margin: 20px 0; padding: 20px; background: #f9f9f9; border-radius: 8px; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              th, td { border: 1px solid #eee; padding: 12px; text-align: left; }
+              th { background-color: #f4f4f4; }
+              .negative { color: #ef4444; }
             </style>
           </head>
           <body>
-            <h1>${unitName} Financial Report</h1>
+            <h1>${unitName} Report</h1>
             <p style="text-align:center;">${periodLabel}</p>
-            
-            <h2>Net Profit: ${formatMoney(result.net, settings.currency)}</h2>
-            
-            <h2>Profit Distribution</h2>
-            <p>Investor (${settings.investorSharePct}%): ${formatMoney(result.investorShare, settings.currency)}</p>
-            <p>Operator (${settings.operatorSharePct}%): ${formatMoney(result.operatorShare, settings.currency)}</p>
-
-            <h2>Expenses (${filteredExpenses.length})</h2>
+            <div class="summary">
+              <h2>Net Profit: ${formatMoney(result.net, settings?.currency || "USD")}</h2>
+              <p>Investor Share: ${formatMoney(result.investorShare, settings?.currency || "USD")}</p>
+              <p>Operator Share: ${formatMoney(result.operatorShare, settings?.currency || "USD")}</p>
+            </div>
             <table>
-              <tr><th>Date</th><th>Description</th><th>Amount</th></tr>
-              ${filteredExpenses.map(e => `
-                <tr>
-                  <td>${formatShort(e.date)}</td>
-                  <td>${e.description || e.category}</td>
-                  <td>-${formatMoney(e.amount, settings.currency)}</td>
-                </tr>
-              `).join('')}
+              <thead>
+                <tr><th>Date</th><th>Description</th><th>Amount</th></tr>
+              </thead>
+              <tbody>
+                ${filteredExpenses.map(e => `
+                  <tr>
+                    <td>${formatShort(e.date)}</td>
+                    <td>${e.description || e.category}</td>
+                    <td class="negative">-${formatMoney(e.amount, settings?.currency || "USD")}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
             </table>
           </body>
         </html>
@@ -128,13 +131,13 @@ export default function FinanceScreen() {
 
       const { uri } = await Print.printToFileAsync({ html });
       await Sharing.shareAsync(uri);
-
-      Alert.alert("Success", "PDF generated successfully!");
     } catch (error: any) {
-      console.error("PDF Error:", error);
       Alert.alert("Export Failed", error.message || "Could not generate PDF");
     }
   };
+
+  // Guard against missing settings
+  if (!settings) return null;
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
@@ -204,7 +207,7 @@ export default function FinanceScreen() {
           ) : (
             filteredExpenses.slice(0, 6).map((e) => (
               <View key={e.id} style={styles.expenseItem}>
-                <Text style={{ flex: 1 }}>{e.description || e.category}</Text>
+                <Text style={{ flex: 1, color: c.foreground }}>{e.description || e.category}</Text>
                 <Text style={{ color: "#ef4444", fontWeight: "600" }}>
                   -{formatMoney(e.amount, settings.currency)}
                 </Text>
@@ -217,7 +220,6 @@ export default function FinanceScreen() {
   );
 }
 
-// Simple UnitChip Component
 function UnitChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
   const c = useColors();
   return (
